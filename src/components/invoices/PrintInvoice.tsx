@@ -370,7 +370,7 @@ export function PrintInvoice({ invoice, company, party, items }: PrintInvoicePro
           </div>
 
           {/* Right: Totals Box */}
-          <div style={{ width: '240px', border: '1px solid #000', padding: '4px 8px', fontSize: '8pt', backgroundColor: '#fff', shrink: 0 }}>
+          <div style={{ width: '240px', border: '1px solid #000', padding: '4px 8px', fontSize: '8pt', backgroundColor: '#fff', flexShrink: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1px 0' }}>
               <span>Subtotal:</span>
               <span>₹ {fmt(invoice.subtotal)}</span>

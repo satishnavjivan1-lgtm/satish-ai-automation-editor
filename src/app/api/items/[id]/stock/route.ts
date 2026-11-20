@@ -29,11 +29,13 @@ export async function POST(
     const stockEntry = await prisma.stockLedger.create({
       data: {
         itemId: id,
-        date: date ? new Date(date) : new Date(),
-        type: type, // STOCK_IN, STOCK_OUT, ADJUSTMENT
+        entryDate: date ? new Date(date) : new Date(),
+        type: (type === 'STOCK_IN' ? 'IN' : type === 'STOCK_OUT' ? 'OUT' : 'ADJUSTMENT') as any,
+        refType: 'MANUAL',
+        rate: item.purchaseRate || 0,
         qtyPcs: adjQty,
         weightKg: adjWeight,
-        narration: narration || `Manual ${type} adjustment`,
+        notes: narration || `Manual ${type} adjustment`,
       },
     })
 

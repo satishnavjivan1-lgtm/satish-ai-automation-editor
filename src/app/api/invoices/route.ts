@@ -89,8 +89,8 @@ export async function POST(request: NextRequest) {
       hsnCode: string
       qtyPcs: number
       weightKg: number
-      unit: string
-      priceMode: string
+      unit: any
+      priceMode: any
       rate: number
       discountPct: number
       taxableAmt: number
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
           status,
           notes: notes || null,
           items: {
-            create: processedItems,
+            create: processedItems as any,
           },
         },
         include: { items: true, party: true },

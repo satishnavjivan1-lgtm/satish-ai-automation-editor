@@ -10,8 +10,7 @@
 
 @media print {
   @page {
-    https: //tidbcloud.com/tidbs?orgId=1372813089209390019
-      size: A4 portrait;
+    size: A4 portrait;
     margin: 6mm 8mm;
   }
 

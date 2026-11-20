@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
           ) + parseFloat(amount)
 
           const totalAmt = Number(invoice.totalAmt)
-          let newStatus: string
+          let newStatus: any
 
           if (totalPaid >= totalAmt) {
             newStatus = 'PAID'

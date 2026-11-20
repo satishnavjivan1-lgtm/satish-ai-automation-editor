@@ -17,9 +17,9 @@ export async function GET(request: NextRequest) {
       where.expenseDate = {}
       if (dateFrom && dateFrom.trim()) (where.expenseDate as Record<string, Date>).gte = new Date(dateFrom.trim())
       if (dateTo && dateTo.trim()) {
-        const toEnd = new Date(dateTo.trim())
-        toEnd.setHours(23, 59, 59, 999)
-          (where.expenseDate as Record<string, Date>).lte = toEnd
+        const toEnd = new Date(dateTo.trim());
+        toEnd.setHours(23, 59, 59, 999);
+        (where.expenseDate as Record<string, Date>).lte = toEnd;
       }
     }
 

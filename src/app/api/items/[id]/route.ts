@@ -13,7 +13,7 @@ export async function GET(
       where: { id },
       include: {
         category: true,
-        stockLedger: { orderBy: { date: 'desc' }, take: 50 },
+        stockLedger: { orderBy: { createdAt: 'desc' }, take: 50 },
       },
     })
 
