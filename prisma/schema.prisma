@@ -1,0 +1,319 @@
+// Prisma Schema for Navjivan ERP System
+// Jamnagar, Gujarat — Brass Manufacturing
+// MySQL Provider
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum PartyType {
+  CUSTOMER
+  VENDOR
+  BOTH
+}
+
+enum BalanceType {
+  DR
+  CR
+}
+
+enum CategoryType {
+  RAW_MATERIAL
+  WIP
+  FINISHED_GOOD
+  CONSUMABLE
+}
+
+enum UnitType {
+  PCS
+  KG
+  GRAM
+  GROSS
+  SET
+  MTR
+  BOX
+}
+
+enum PriceMode {
+  PER_PIECE
+  PER_KG
+  PER_GRAM
+  PER_GROSS
+}
+
+enum InvoiceType {
+  TAX_INVOICE
+  QUOTATION
+  DELIVERY_CHALLAN
+  CREDIT_NOTE
+}
+
+enum GSTType {
+  SAME_STATE
+  DIFF_STATE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  UNPAID
+  PAID
+  PARTIAL
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentType {
+  RECEIVED
+  PAID
+}
+
+enum PaymentMode {
+  CASH
+  UPI
+  NEFT
+  RTGS
+  CHEQUE
+  OTHER
+}
+
+enum ExpenseCategory {
+  ELECTRICITY
+  RAW_MATERIAL
+  JOB_WORK_LABOR
+  TRANSPORT
+  RENT
+  SALARY
+  MISC
+}
+
+enum StockType {
+  IN
+  OUT
+  ADJUSTMENT
+  JOB_WORK_OUT
+  JOB_WORK_IN
+}
+
+enum ChallanStatus {
+  OPEN
+  PARTIAL
+  CLOSED
+}
+
+enum ProcessType {
+  CASTING
+  MACHINING
+  ELECTROPLATING
+  POLISHING
+  OTHER
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Company {
+  id                 Int      @id @default(autoincrement())
+  name               String
+  logoUrl            String?  @db.LongText
+  address            String   @db.Text
+  city               String
+  state              String
+  stateCode          String   @default("24")
+  gstin              String
+  pan                String
+  phone              String
+  email              String?
+  bankName           String?
+  accountNo          String?
+  ifscCode           String?
+  branch             String?
+  upiId              String?
+  invoicePrefix      String?  @default("NVJ")
+  termsAndConditions String?  @db.Text
+  createdAt          DateTime @default(now())
+}
+
+model Party {
+  id                  Int             @id @default(autoincrement())
+  type                PartyType
+  name                String
+  gstin               String?
+  pan                 String?
+  phone               String
+  email               String?
+  address             String          @db.Text
+  city                String
+  state               String          @default("Gujarat")
+  stateCode           String          @default("24")
+  creditLimit         Decimal         @default(0) @db.Decimal(12, 2)
+  openingBalance      Decimal         @default(0) @db.Decimal(12, 2)
+  openingBalanceType  BalanceType     @default(CR)
+  isActive            Boolean         @default(true)
+  createdAt           DateTime        @default(now())
+  invoices            Invoice[]
+  payments            Payment[]
+  expenses            Expense[]
+  jobWorkChallans     JobWorkChallan[]
+}
+
+model ItemCategory {
+  id          Int          @id @default(autoincrement())
+  name        String
+  type        CategoryType
+  description String?
+  items       Item[]
+}
+
+model Item {
+  id             Int               @id @default(autoincrement())
+  name           String
+  code           String            @unique
+  hsnCode        String
+  categoryId     Int
+  unit           UnitType          @default(PCS)
+  priceMode      PriceMode         @default(PER_PIECE)
+  purchaseRate   Decimal           @db.Decimal(12, 4)
+  saleRate       Decimal           @db.Decimal(12, 4)
+  gstRate        Decimal           @default(18) @db.Decimal(5, 2)
+  currentQtyPcs  Int               @default(0)
+  currentWeightKg Decimal          @default(0) @db.Decimal(12, 3)
+  /// Standard weight in KG for 1 GROSS (144 pcs) — critical for Gujarat brass trade
+  grossWeightKg  Decimal?          @db.Decimal(10, 4)
+  minStockQty    Int               @default(0)
+  isActive       Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  category       ItemCategory      @relation(fields: [categoryId], references: [id])
+  stockLedger    StockLedger[]
+  invoiceItems   InvoiceItem[]
+  jobWorkItems   JobWorkChallanItem[]
+}
+
+model Invoice {
+  id             Int           @id @default(autoincrement())
+  invoiceNo      String        @unique
+  type           InvoiceType   @default(TAX_INVOICE)
+  partyId        Int
+  invoiceDate    DateTime
+  dueDate        DateTime?
+  sellerState    String        @default("24")
+  customerState  String
+  gstType        GSTType
+  subtotal       Decimal       @db.Decimal(12, 2)
+  discountAmt    Decimal       @default(0) @db.Decimal(12, 2)
+  taxableAmt     Decimal       @db.Decimal(12, 2)
+  cgstAmt        Decimal       @default(0) @db.Decimal(12, 2)
+  sgstAmt        Decimal       @default(0) @db.Decimal(12, 2)
+  igstAmt        Decimal       @default(0) @db.Decimal(12, 2)
+  roundOff       Decimal       @default(0) @db.Decimal(5, 2)
+  totalAmt       Decimal       @db.Decimal(12, 2)
+  amountInWords  String        @db.Text
+  status         InvoiceStatus @default(DRAFT)
+  notes          String?       @db.Text
+  createdAt      DateTime      @default(now())
+  party          Party         @relation(fields: [partyId], references: [id])
+  items          InvoiceItem[]
+  payments       Payment[]
+}
+
+model InvoiceItem {
+  id           Int       @id @default(autoincrement())
+  invoiceId    Int
+  itemId       Int
+  description  String
+  hsnCode      String
+  qtyPcs       Decimal   @db.Decimal(12, 3)
+  weightKg     Decimal   @default(0) @db.Decimal(12, 3)
+  unit         UnitType
+  priceMode    PriceMode
+  rate         Decimal   @db.Decimal(12, 4)
+  discountPct  Decimal   @default(0) @db.Decimal(5, 2)
+  taxableAmt   Decimal   @db.Decimal(12, 2)
+  gstRate      Decimal   @db.Decimal(5, 2)
+  cgstPct      Decimal   @default(0) @db.Decimal(5, 2)
+  sgstPct      Decimal   @default(0) @db.Decimal(5, 2)
+  igstPct      Decimal   @default(0) @db.Decimal(5, 2)
+  cgstAmt      Decimal   @default(0) @db.Decimal(12, 2)
+  sgstAmt      Decimal   @default(0) @db.Decimal(12, 2)
+  igstAmt      Decimal   @default(0) @db.Decimal(12, 2)
+  totalAmt     Decimal   @db.Decimal(12, 2)
+  invoice      Invoice   @relation(fields: [invoiceId], references: [id])
+  item         Item      @relation(fields: [itemId], references: [id])
+}
+
+model Payment {
+  id          Int         @id @default(autoincrement())
+  type        PaymentType
+  partyId     Int
+  invoiceId   Int?
+  amount      Decimal     @db.Decimal(12, 2)
+  paymentDate DateTime
+  mode        PaymentMode
+  reference   String?
+  notes       String?
+  createdAt   DateTime    @default(now())
+  party       Party       @relation(fields: [partyId], references: [id])
+  invoice     Invoice?    @relation(fields: [invoiceId], references: [id])
+}
+
+model Expense {
+  id          Int             @id @default(autoincrement())
+  category    ExpenseCategory
+  amount      Decimal         @db.Decimal(12, 2)
+  expenseDate DateTime
+  description String?
+  paymentMode PaymentMode     @default(CASH)
+  partyId     Int?
+  createdAt   DateTime        @default(now())
+  party       Party?          @relation(fields: [partyId], references: [id])
+}
+
+model StockLedger {
+  id        Int       @id @default(autoincrement())
+  itemId    Int
+  type      StockType
+  refType   String
+  refId     Int?
+  qtyPcs    Decimal   @db.Decimal(12, 3)
+  weightKg  Decimal   @db.Decimal(12, 3)
+  rate      Decimal   @db.Decimal(12, 4)
+  notes     String?
+  entryDate DateTime
+  createdAt DateTime  @default(now())
+  item      Item      @relation(fields: [itemId], references: [id])
+}
+
+model JobWorkChallan {
+  id                 Int                  @id @default(autoincrement())
+  challanNo          String               @unique
+  partyId            Int
+  status             ChallanStatus        @default(OPEN)
+  challanDate        DateTime
+  expectedReturnDate DateTime?
+  notes              String?
+  createdAt          DateTime             @default(now())
+  party              Party                @relation(fields: [partyId], references: [id])
+  items              JobWorkChallanItem[]
+}
+
+model JobWorkChallanItem {
+  id               Int          @id @default(autoincrement())
+  challanId        Int
+  itemId           Int
+  description      String?
+  processType      ProcessType  @default(CASTING)
+  sentQtyPcs       Int          @default(0)
+  sentWeightKg     Decimal      @db.Decimal(12, 3)
+  receivedQtyPcs   Int          @default(0)
+  receivedWeightKg Decimal      @default(0) @db.Decimal(12, 3)
+  burningLossKg    Decimal      @default(0) @db.Decimal(12, 3)
+  burningLossPct   Decimal      @default(0) @db.Decimal(5, 2)
+  challan          JobWorkChallan @relation(fields: [challanId], references: [id])
+  item             Item           @relation(fields: [itemId], references: [id])
+}

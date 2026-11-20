@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .print-only {
+    display: none;
+  }
+}
+
+@media print {
+  @page {
+    https: //tidbcloud.com/tidbs?orgId=1372813089209390019
+      size: A4 portrait;
+    margin: 6mm 8mm;
+  }
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print,
+  aside,
+  header,
+  nav,
+  .no-print * {
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .ml-64,
+  .min-h-screen {
+    margin-left: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+}
