@@ -19,51 +19,59 @@ export async function POST(req: NextRequest) {
     if (pin && typeof pin === 'string') {
       const trimmedPin = pin.trim();
 
-      // Check in User table
-      const dbUser = await prisma.user.findFirst({
-        where: { pin: trimmedPin, isActive: true },
-        include: { company: true },
-      });
-
-      if (dbUser) {
-        authenticatedUser = {
-          id: dbUser.id,
-          name: dbUser.name,
-          username: dbUser.username,
-          email: dbUser.email,
-          role: dbUser.role,
-          companyId: dbUser.companyId,
-        };
-
-        // Update last login timestamp
-        await prisma.user.update({
-          where: { id: dbUser.id },
-          data: { lastLoginAt: new Date() },
-        });
-      } else {
-        // Check in SuperAdmin table
-        const superAdmin = await prisma.superAdmin.findFirst({
+      try {
+        // Check in User table
+        const dbUser = await prisma.user.findFirst({
           where: { pin: trimmedPin, isActive: true },
+          include: { company: true },
         });
 
-        if (superAdmin) {
+        if (dbUser) {
           authenticatedUser = {
-            id: superAdmin.id,
-            name: superAdmin.name,
-            username: superAdmin.email,
-            email: superAdmin.email,
-            role: 'SUPER_ADMIN',
+            id: dbUser.id,
+            name: dbUser.name,
+            username: dbUser.username,
+            email: dbUser.email,
+            role: dbUser.role,
+            companyId: dbUser.companyId,
           };
-        } else if (trimmedPin === (process.env.APP_PIN || '1234')) {
-          // Fallback to default admin
-          authenticatedUser = {
-            id: 1,
-            name: 'Admin',
-            username: 'admin',
-            email: 'admin@navjivan.com',
-            role: 'ADMIN',
-          };
+
+          // Update last login timestamp
+          prisma.user
+            .update({
+              where: { id: dbUser.id },
+              data: { lastLoginAt: new Date() },
+            })
+            .catch(() => {});
+        } else {
+          // Check in SuperAdmin table
+          const superAdmin = await prisma.superAdmin.findFirst({
+            where: { pin: trimmedPin, isActive: true },
+          });
+
+          if (superAdmin) {
+            authenticatedUser = {
+              id: superAdmin.id,
+              name: superAdmin.name,
+              username: superAdmin.email,
+              email: superAdmin.email,
+              role: 'SUPER_ADMIN',
+            };
+          }
         }
+      } catch (dbErr) {
+        console.warn('Database query error in PIN login, checking fallback:', dbErr);
+      }
+
+      // Safe fallback to default PIN if not authenticated yet
+      if (!authenticatedUser && trimmedPin === (process.env.APP_PIN || '1234')) {
+        authenticatedUser = {
+          id: 1,
+          name: 'Admin',
+          username: 'admin',
+          email: 'admin@navjivan.com',
+          role: 'ADMIN',
+        };
       }
     }
 
@@ -72,54 +80,64 @@ export async function POST(req: NextRequest) {
       const u = username.trim();
       const p = password.trim();
 
-      // Check in User table
-      const dbUser = await prisma.user.findFirst({
-        where: {
-          OR: [{ username: u }, { email: u }],
-          isActive: true,
-        },
-      });
-
-      if (dbUser && dbUser.passwordHash === p) {
-        authenticatedUser = {
-          id: dbUser.id,
-          name: dbUser.name,
-          username: dbUser.username,
-          email: dbUser.email,
-          role: dbUser.role,
-          companyId: dbUser.companyId,
-        };
-
-        await prisma.user.update({
-          where: { id: dbUser.id },
-          data: { lastLoginAt: new Date() },
-        });
-      } else {
-        // Check in SuperAdmin table
-        const superAdmin = await prisma.superAdmin.findFirst({
-          where: { email: u, isActive: true },
+      try {
+        // Check in User table
+        const dbUser = await prisma.user.findFirst({
+          where: {
+            OR: [{ username: u }, { email: u }],
+            isActive: true,
+          },
         });
 
-        if (superAdmin && superAdmin.passwordHash === p) {
+        if (dbUser && dbUser.passwordHash === p) {
           authenticatedUser = {
-            id: superAdmin.id,
-            name: superAdmin.name,
-            username: superAdmin.email,
-            email: superAdmin.email,
-            role: 'SUPER_ADMIN',
+            id: dbUser.id,
+            name: dbUser.name,
+            username: dbUser.username,
+            email: dbUser.email,
+            role: dbUser.role,
+            companyId: dbUser.companyId,
           };
-        } else if (
-          u === (process.env.ADMIN_USERNAME || 'admin') &&
-          p === (process.env.ADMIN_PASSWORD || 'admin')
-        ) {
-          authenticatedUser = {
-            id: 1,
-            name: 'Admin',
-            username: 'admin',
-            email: 'admin@navjivan.com',
-            role: 'ADMIN',
-          };
+
+          prisma.user
+            .update({
+              where: { id: dbUser.id },
+              data: { lastLoginAt: new Date() },
+            })
+            .catch(() => {});
+        } else {
+          // Check in SuperAdmin table
+          const superAdmin = await prisma.superAdmin.findFirst({
+            where: { email: u, isActive: true },
+          });
+
+          if (superAdmin && superAdmin.passwordHash === p) {
+            authenticatedUser = {
+              id: superAdmin.id,
+              name: superAdmin.name,
+              username: superAdmin.email,
+              email: superAdmin.email,
+              role: 'SUPER_ADMIN',
+            };
+          }
         }
+      } catch (dbErr) {
+        console.warn('Database query error in user/pass login, checking fallback:', dbErr);
+      }
+
+      // Safe fallback to admin credentials
+      if (
+        !authenticatedUser &&
+        u === (process.env.ADMIN_USERNAME || 'admin') &&
+        p === (process.env.ADMIN_PASSWORD || 'admin')
+      ) {
+        authenticatedUser = {
+          id: 1,
+          name: 'Admin',
+          username: 'admin',
+          email: 'admin@navjivan.com',
+          role: 'ADMIN',
+        };
       }
     }
 
@@ -161,7 +179,7 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Fatal Login error:', error);
     return NextResponse.json(
       { success: false, error: 'સર્વર એરર આવી છે' },
       { status: 500 }

@@ -249,9 +249,6 @@ export default function LoginPage() {
                   />
                 ))}
               </div>
-              <div className="mt-2 text-xs text-gray-400">
-                Default PIN: <span className="font-semibold text-gray-600">1234</span>
-              </div>
             </div>
 
             {/* Virtual Keypad for Mobile / Touch / Quick Clicks */}
@@ -378,9 +375,6 @@ export default function LoginPage() {
                     <Eye className="w-4 h-4" />
                   )}
                 </button>
-              </div>
-              <div className="mt-1 text-xs text-gray-400">
-                Default: <span className="font-semibold text-gray-600">admin / admin</span>
               </div>
             </div>
 
