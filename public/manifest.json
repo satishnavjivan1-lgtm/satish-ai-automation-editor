@@ -1,0 +1,17 @@
+{
+  "name": "Kundan Enterprise ERP",
+  "short_name": "Kundan ERP",
+  "description": "Billing, Invoicing and Inventory Management ERP",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a5f",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

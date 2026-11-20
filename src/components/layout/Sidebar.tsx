@@ -15,6 +15,8 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
+  LogOut,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -50,15 +52,18 @@ function NavLink({
   icon: Icon,
   label,
   active,
+  onClick,
 }: {
   href: string;
   icon: React.ElementType;
   label: string;
   active: boolean;
+  onClick?: () => void;
 }) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={cn(
         'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors relative',
         active
@@ -72,7 +77,13 @@ function NavLink({
   );
 }
 
-export function Sidebar() {
+export function Sidebar({
+  isOpen = false,
+  onClose,
+}: {
+  isOpen?: boolean;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
   const [reportsOpen, setReportsOpen] = useState(
     () => pathname.startsWith('/reports')
@@ -89,7 +100,7 @@ export function Sidebar() {
         if (d?.city) setCompanyCity(`${d.city}, ${d.state || 'Gujarat'}`);
         if (d?.logoUrl) setCompanyLogo(d.logoUrl);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const initials =
@@ -102,8 +113,13 @@ export function Sidebar() {
       .toUpperCase() || 'ERP';
 
   return (
-    <aside className="fixed inset-y-0 left-0 w-64 flex flex-col z-30 overflow-y-auto"
-      style={{ backgroundColor: '#1e3a5f' }}>
+    <aside
+      className={cn(
+        'fixed inset-y-0 left-0 w-64 flex flex-col z-50 overflow-y-auto transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none',
+        isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      )}
+      style={{ backgroundColor: '#1e3a5f' }}
+    >
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10 shrink-0">
         <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center shrink-0 overflow-hidden">
@@ -115,10 +131,21 @@ export function Sidebar() {
             </div>
           )}
         </div>
-        <div className="overflow-hidden">
+        <div className="overflow-hidden flex-1">
           <p className="text-white text-sm font-semibold leading-tight truncate">{companyName}</p>
           <p className="text-blue-300 text-xs truncate">{companyCity}</p>
         </div>
+
+        {/* Mobile Close Button */}
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="lg:hidden text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Nav */}
@@ -151,6 +178,7 @@ export function Sidebar() {
                       <Link
                         key={child.href}
                         href={child.href}
+                        onClick={onClose}
                         className={cn(
                           'block px-3 py-2 rounded-lg text-xs font-medium transition-colors',
                           pathname === child.href
@@ -173,6 +201,7 @@ export function Sidebar() {
               href={item.href!}
               icon={item.icon}
               label={item.label}
+              onClick={onClose}
               active={
                 item.href === '/dashboard'
                   ? pathname === '/dashboard'
@@ -183,9 +212,27 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* Logout button */}
+      <div className="px-3 py-2 border-t border-white/10 shrink-0">
+        <button
+          onClick={async () => {
+            try {
+              await fetch('/api/auth/logout', { method: 'POST' });
+              window.location.href = '/login';
+            } catch {
+              window.location.href = '/login';
+            }
+          }}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-red-200 hover:bg-red-500/20 hover:text-white transition-colors"
+        >
+          <LogOut className="w-4 h-4 shrink-0 text-red-400" />
+          <span>લૉગ આઉટ (Log Out)</span>
+        </button>
+      </div>
+
       {/* Footer */}
-      <div className="px-5 py-4 border-t border-white/10 shrink-0">
-        <p className="text-blue-300 text-xs text-center">Navjivan ERP v1.0</p>
+      <div className="px-5 py-3 shrink-0">
+        <p className="text-blue-300/80 text-xs text-center">{companyName} ERP v1.0</p>
       </div>
     </aside>
   );

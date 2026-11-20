@@ -19,7 +19,9 @@ import {
   Image as ImageIcon,
   Upload,
   Trash2,
+  Users,
 } from 'lucide-react'
+import { UserManagementTab } from '@/components/settings/UserManagementTab'
 
 interface CompanyData {
   id?: number
@@ -69,7 +71,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [successMsg, setSuccessMsg] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
-  const [activeTab, setActiveTab] = useState<'PROFILE' | 'BANK' | 'INVOICE' | 'PREVIEW'>('PROFILE')
+  const [activeTab, setActiveTab] = useState<'PROFILE' | 'BANK' | 'INVOICE' | 'USERS' | 'PREVIEW'>('PROFILE')
 
   useEffect(() => {
     fetchCompany()
@@ -262,6 +264,18 @@ export default function SettingsPage() {
         >
           <FileText className="h-4 w-4" />
           Invoice &amp; Terms
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('USERS')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${activeTab === 'USERS'
+              ? 'bg-blue-700 text-white shadow-sm'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+            }`}
+        >
+          <Users className="h-4 w-4" />
+          યુઝર્સ મેનેજમેન્ટ (User Management)
         </button>
 
         <button
@@ -734,30 +748,35 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {/* TAB 5: USER MANAGEMENT */}
+          {activeTab === 'USERS' && <UserManagementTab />}
+
           {/* Bottom Action Bar */}
-          <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <ShieldCheck className="h-4 w-4 text-green-600" />
-              <span>All company details are encrypted &amp; stored safely in MySQL database.</span>
+          {activeTab !== 'USERS' && (
+            <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-200">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <ShieldCheck className="h-4 w-4 text-green-600" />
+                <span>All company details are encrypted &amp; stored safely in MySQL database.</span>
+              </div>
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-700 text-white font-medium rounded-lg hover:bg-blue-800 disabled:opacity-50 transition-colors shadow-sm"
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </button>
             </div>
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-700 text-white font-medium rounded-lg hover:bg-blue-800 disabled:opacity-50 transition-colors shadow-sm"
-            >
-              {saving ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </button>
-          </div>
+          )}
         </form>
       )}
     </div>

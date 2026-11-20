@@ -1,10 +1,24 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { AppLayout } from '@/components/layout/AppLayout';
 
 export const metadata: Metadata = {
-  title: 'Navjivan ERP System',
-  description: 'Billing & Inventory ERP for Navjivan, Jamnagar',
+  title: 'Kundan Enterprise - ERP System',
+  description: 'Billing & Inventory ERP for Kundan Enterprise, Jamnagar',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Kundan ERP',
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#1e3a5f',
 };
 
 export default function RootLayout({
@@ -13,18 +27,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="gu">
       <body
-        className="bg-gray-50 text-gray-900"
+        className="bg-gray-50 text-gray-900 min-h-screen antialiased"
         style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
       >
-        <div className="no-print">
-          <Sidebar />
-        </div>
-        {/* Offset for fixed sidebar (zero on print) */}
-        <div className="ml-64 print:ml-0 print:p-0 flex flex-col min-h-screen">
-          {children}
-        </div>
+        <AppLayout>{children}</AppLayout>
       </body>
     </html>
   );

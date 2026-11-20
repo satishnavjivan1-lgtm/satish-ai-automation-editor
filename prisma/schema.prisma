@@ -117,7 +117,27 @@ enum ProcessType {
   OTHER
 }
 
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  BILLING_OPERATOR
+  ACCOUNTANT
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
+
+model SuperAdmin {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String
+  pin          String?  @default("1234")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
 
 model Company {
   id                 Int      @id @default(autoincrement())
@@ -138,7 +158,41 @@ model Company {
   upiId              String?
   invoicePrefix      String?  @default("NVJ")
   termsAndConditions String?  @db.Text
+  isActive           Boolean  @default(true)
+  maxUsers           Int      @default(10)
   createdAt          DateTime @default(now())
+  users              User[]
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  companyId    Int
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name         String
+  username     String    @unique
+  email        String    @unique
+  phone        String?
+  passwordHash String
+  pin          String?   @default("1234")
+  role         UserRole  @default(BILLING_OPERATOR)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([companyId])
+}
+
+model PasswordResetOtp {
+  id        Int      @id @default(autoincrement())
+  email     String
+  otp       String
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([email])
 }
 
 model Party {

@@ -4,15 +4,9 @@ import prisma from '@/lib/prisma'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const month = searchParams.get('month')
-    const year = searchParams.get('year')
-
-    if (!month || !year) {
-      return NextResponse.json(
-        { error: 'Missing required params: month (1-12), year (YYYY)' },
-        { status: 400 }
-      )
-    }
+    const now = new Date()
+    const month = searchParams.get('month') || String(now.getMonth() + 1)
+    const year = searchParams.get('year') || String(now.getFullYear())
 
     const m = parseInt(month)
     const y = parseInt(year)
