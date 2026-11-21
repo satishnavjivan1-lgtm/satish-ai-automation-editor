@@ -647,24 +647,20 @@ export default function NewInvoicePage() {
 
         {/* ── Desktop View: Full Spreadsheet Table (hidden md:block) ── */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="min-w-[1050px] w-full text-xs">
+          <table className="min-w-[920px] w-full text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 min-w-[160px]">Item</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 min-w-[140px]">Description</th>
-                <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-20">HSN</th>
-                <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-20">Qty</th>
-                <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-20">Wt(Kg)</th>
-                <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-16">Unit</th>
-                <th className="px-3 py-2.5 text-right font-semibold text-gray-600 w-24">Rate</th>
-                <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-16">Disc%</th>
-                <th className="px-3 py-2.5 text-right font-semibold text-gray-600 w-24">Taxable</th>
-                <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-16">GST%</th>
-                <th className="px-3 py-2.5 text-right font-semibold text-gray-600 w-24">
-                  {isSameState ? 'CGST / SGST' : 'IGST'}
-                </th>
-                <th className="px-3 py-2.5 text-right font-semibold text-gray-600 w-24">Total</th>
-                <th className="px-3 py-2.5 w-8" />
+                <th className="px-2.5 py-2.5 text-left font-semibold text-gray-700 min-w-[200px]">Item &amp; Description</th>
+                <th className="px-2 py-2.5 text-center font-semibold text-gray-700 w-20 min-w-[70px]">HSN</th>
+                <th className="px-2 py-2.5 text-center font-semibold text-gray-700 w-20 min-w-[70px]">Qty</th>
+                <th className="px-2 py-2.5 text-center font-semibold text-gray-700 w-20 min-w-[70px]">Wt(Kg)</th>
+                <th className="px-2 py-2.5 text-center font-semibold text-gray-700 w-20 min-w-[75px]">Unit</th>
+                <th className="px-2 py-2.5 text-right font-semibold text-gray-700 w-24 min-w-[85px]">Rate (₹)</th>
+                <th className="px-2 py-2.5 text-center font-semibold text-gray-700 w-16 min-w-[65px]">Disc%</th>
+                <th className="px-2 py-2.5 text-right font-semibold text-gray-700 w-24 min-w-[85px]">Taxable</th>
+                <th className="px-2 py-2.5 text-center font-semibold text-gray-700 w-20 min-w-[75px]">GST%</th>
+                <th className="px-2.5 py-2.5 text-right font-semibold text-gray-700 w-28 min-w-[95px]">Total (₹)</th>
+                <th className="px-2 py-2.5 w-10 min-w-[40px]" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -806,61 +802,58 @@ function ItemRow({ row, catalog, isSameState, onItemSelect, onChange, onRemove }
   const isGross = row.unit === 'GROSS';
 
   return (
-    <tr className="hover:bg-gray-50">
-      {/* Item selector */}
-      <td className="px-3 py-2">
+    <tr className="hover:bg-gray-50 border-b border-gray-100">
+      {/* 1. Item selector & Description */}
+      <td className="px-2.5 py-2">
         <select
           value={row.itemId ?? ''}
           onChange={e => onItemSelect(Number(e.target.value))}
-          className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
         >
-          <option value="">-- Select --</option>
+          <option value="">-- Select Item --</option>
           {(Array.isArray(catalog) ? catalog : []).map(item => (
             <option key={item.id} value={item.id}>{item.name} ({item.code})</option>
           ))}
         </select>
-      </td>
-
-      {/* Description */}
-      <td className="px-3 py-2">
         <input
           type="text"
           value={row.description}
           onChange={e => onChange('description', e.target.value)}
-          placeholder="Description"
-          className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+          placeholder="Description (optional)"
+          className="w-full mt-1 border border-gray-200 rounded-md px-2 py-1 text-[11px] text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-gray-50/50"
         />
       </td>
 
-      {/* HSN */}
-      <td className="px-3 py-2">
+      {/* 2. HSN */}
+      <td className="px-2 py-2">
         <input
           type="text"
           value={row.hsnCode}
           onChange={e => onChange('hsnCode', e.target.value)}
-          className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
+          placeholder="HSN"
+          className="w-full border border-gray-300 rounded-md px-1.5 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
         />
       </td>
 
-      {/* Qty */}
-      <td className="px-3 py-2">
+      {/* 3. Qty */}
+      <td className="px-2 py-2">
         <input
           type="number"
           min="0"
           step="any"
-          value={row.qty}
+          value={row.qty || ''}
           onChange={e => onChange('qty', parseFloat(e.target.value) || 0)}
-          className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full border border-gray-300 rounded-md px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
         />
         {isGross && row.qty > 0 && (
-          <div className="text-gray-400 text-[10px] text-center mt-0.5">
-            = {(row.qty * 144).toFixed(0)} pcs
+          <div className="text-gray-400 text-[10px] text-center mt-0.5 whitespace-nowrap">
+            ={(row.qty * 144).toFixed(0)} pcs
           </div>
         )}
       </td>
 
-      {/* Weight Kg */}
-      <td className="px-3 py-2">
+      {/* 4. Weight Kg */}
+      <td className="px-2 py-2">
         <input
           type="number"
           min="0"
@@ -868,16 +861,16 @@ function ItemRow({ row, catalog, isSameState, onItemSelect, onChange, onRemove }
           value={row.weightKg || ''}
           onChange={e => onChange('weightKg', parseFloat(e.target.value) || 0)}
           placeholder="0.000"
-          className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full border border-gray-300 rounded-md px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
         />
       </td>
 
-      {/* Unit */}
-      <td className="px-3 py-2">
+      {/* 5. Unit */}
+      <td className="px-2 py-2">
         <select
           value={row.unit}
           onChange={e => onChange('unit', e.target.value)}
-          className="w-full border border-gray-300 rounded-md px-1 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full border border-gray-300 rounded-md px-1 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
         >
           <option value="PCS">PCS</option>
           <option value="KG">KG</option>
@@ -886,45 +879,46 @@ function ItemRow({ row, catalog, isSameState, onItemSelect, onChange, onRemove }
         </select>
       </td>
 
-      {/* Rate */}
-      <td className="px-3 py-2">
+      {/* 6. Rate */}
+      <td className="px-2 py-2">
         <input
           type="number"
           min="0"
           step="0.01"
-          value={row.rate}
+          value={row.rate || ''}
           onChange={e => onChange('rate', parseFloat(e.target.value) || 0)}
-          className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full border border-gray-300 rounded-md px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
         />
         {row.unit === 'GROSS' && (
-          <div className="text-gray-400 text-[10px] text-center mt-0.5">per 144 pcs</div>
+          <div className="text-gray-400 text-[10px] text-center mt-0.5 whitespace-nowrap">per 144</div>
         )}
       </td>
 
-      {/* Discount % */}
-      <td className="px-3 py-2">
+      {/* 7. Discount % */}
+      <td className="px-2 py-2">
         <input
           type="number"
           min="0"
           max="100"
           step="0.01"
-          value={row.discountPct}
+          value={row.discountPct || ''}
           onChange={e => onChange('discountPct', parseFloat(e.target.value) || 0)}
-          className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
+          placeholder="0"
+          className="w-full border border-gray-300 rounded-md px-1 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
       </td>
 
-      {/* Taxable Amount */}
-      <td className="px-3 py-2 text-right font-mono text-gray-700">
-        {row.taxableAmt.toFixed(2)}
+      {/* 8. Taxable Amount */}
+      <td className="px-2 py-2 text-right font-mono text-gray-700 text-xs whitespace-nowrap">
+        ₹{row.taxableAmt.toFixed(2)}
       </td>
 
-      {/* GST Rate */}
-      <td className="px-3 py-2">
+      {/* 9. GST Rate + Tax Amt Breakdown */}
+      <td className="px-2 py-2">
         <select
           value={row.gstRate}
           onChange={e => onChange('gstRate', parseFloat(e.target.value))}
-          className="w-full border border-gray-300 rounded-md px-1 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full border border-gray-300 rounded-md px-1 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
         >
           <option value={0}>0%</option>
           <option value={5}>5%</option>
@@ -932,34 +926,27 @@ function ItemRow({ row, catalog, isSameState, onItemSelect, onChange, onRemove }
           <option value={18}>18%</option>
           <option value={28}>28%</option>
         </select>
-      </td>
-
-      {/* CGST/SGST or IGST */}
-      <td className="px-3 py-2 text-right font-mono text-gray-700 text-[11px] leading-relaxed">
-        {isSameState ? (
-          <>
-            <div>C: {row.cgstAmt.toFixed(2)}</div>
-            <div>S: {row.sgstAmt.toFixed(2)}</div>
-          </>
-        ) : (
-          <div>{row.igstAmt.toFixed(2)}</div>
+        {(row.cgstAmt > 0 || row.igstAmt > 0) && (
+          <div className="text-[10px] text-gray-500 text-center font-mono mt-0.5 whitespace-nowrap" title={isSameState ? `CGST: ₹${row.cgstAmt.toFixed(2)} | SGST: ₹${row.sgstAmt.toFixed(2)}` : `IGST: ₹${row.igstAmt.toFixed(2)}`}>
+            +₹{(isSameState ? row.cgstAmt + row.sgstAmt : row.igstAmt).toFixed(1)}
+          </div>
         )}
       </td>
 
-      {/* Total */}
-      <td className="px-3 py-2 text-right font-mono font-semibold text-gray-900">
-        {row.totalAmt.toFixed(2)}
+      {/* 10. Total */}
+      <td className="px-2.5 py-2 text-right font-mono font-bold text-blue-700 text-xs whitespace-nowrap">
+        ₹{row.totalAmt.toFixed(2)}
       </td>
 
-      {/* Remove */}
-      <td className="px-3 py-2 text-center">
+      {/* 11. Remove */}
+      <td className="px-2 py-2 text-center">
         <button
           type="button"
           onClick={onRemove}
-          className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors"
+          className="text-gray-400 hover:text-red-600 p-1.5 rounded transition-colors hover:bg-red-50"
           title="Remove row"
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash2 className="h-4 w-4 text-red-500" />
         </button>
       </td>
     </tr>

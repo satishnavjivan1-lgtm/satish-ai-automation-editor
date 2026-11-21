@@ -659,34 +659,33 @@ export default function EditInvoicePage() {
 
         {/* ── Desktop View: Full Spreadsheet Table (hidden md:block) ── */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="min-w-[1050px] w-full text-xs">
-            <thead className="bg-gray-50 border-b border-gray-200 text-gray-600">
+          <table className="min-w-[920px] w-full text-xs">
+            <thead className="bg-gray-50 border-b border-gray-200 text-gray-700">
               <tr>
-                <th className="px-3 py-2.5 text-left w-8">#</th>
-                <th className="px-3 py-2.5 text-left min-w-[180px]">Item / Description</th>
-                <th className="px-3 py-2.5 text-left w-20">HSN</th>
-                <th className="px-3 py-2.5 text-right w-20">Qty (Gross/Pcs)</th>
-                <th className="px-3 py-2.5 text-right w-20">Weight (Kg)</th>
-                <th className="px-3 py-2.5 text-left w-16">Unit</th>
-                <th className="px-3 py-2.5 text-right w-24">Rate (₹)</th>
-                <th className="px-3 py-2.5 text-right w-16">Disc %</th>
-                <th className="px-3 py-2.5 text-right w-24">Taxable</th>
-                <th className="px-3 py-2.5 text-center w-16">GST %</th>
-                <th className="px-3 py-2.5 text-right w-24">Total (₹)</th>
-                <th className="px-2 py-2.5 w-8"></th>
+                <th className="px-2.5 py-2.5 text-left font-semibold min-w-[200px]">Item &amp; Description</th>
+                <th className="px-2 py-2.5 text-center font-semibold w-20 min-w-[70px]">HSN</th>
+                <th className="px-2 py-2.5 text-center font-semibold w-20 min-w-[70px]">Qty</th>
+                <th className="px-2 py-2.5 text-center font-semibold w-20 min-w-[70px]">Wt(Kg)</th>
+                <th className="px-2 py-2.5 text-center font-semibold w-20 min-w-[75px]">Unit</th>
+                <th className="px-2 py-2.5 text-right font-semibold w-24 min-w-[85px]">Rate (₹)</th>
+                <th className="px-2 py-2.5 text-center font-semibold w-16 min-w-[65px]">Disc %</th>
+                <th className="px-2 py-2.5 text-right font-semibold w-24 min-w-[85px]">Taxable</th>
+                <th className="px-2 py-2.5 text-center font-semibold w-20 min-w-[75px]">GST %</th>
+                <th className="px-2.5 py-2.5 text-right font-semibold w-28 min-w-[95px]">Total (₹)</th>
+                <th className="px-2 py-2.5 w-10 min-w-[40px]"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {rows.map((row, i) => (
-                <tr key={row.id} className="hover:bg-gray-50">
-                  <td className="px-3 py-2 text-gray-400">{i + 1}</td>
-                  <td className="px-3 py-2">
+                <tr key={row.id} className="hover:bg-gray-50 border-b border-gray-100">
+                  {/* 1. Item & Description */}
+                  <td className="px-2.5 py-2">
                     <select
                       value={row.itemId || ''}
                       onChange={(e) => handleItemSelect(row.id, Number(e.target.value))}
-                      className="w-full border border-gray-200 rounded px-2 py-1 mb-1 focus:ring-1 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
                     >
-                      <option value="">Select item...</option>
+                      <option value="">-- Select Item --</option>
                       {(Array.isArray(items) ? items : []).map((it) => (
                         <option key={it.id} value={it.id}>
                           {it.name}
@@ -697,77 +696,106 @@ export default function EditInvoicePage() {
                       type="text"
                       value={row.description}
                       onChange={(e) => handleRowChange(row.id, { description: e.target.value })}
-                      placeholder="Item description"
-                      className="w-full border border-gray-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-500"
+                      placeholder="Description (optional)"
+                      className="w-full mt-1 border border-gray-200 rounded-md px-2 py-1 text-[11px] text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-gray-50/50"
                     />
                   </td>
-                  <td className="px-3 py-2">
+
+                  {/* 2. HSN */}
+                  <td className="px-2 py-2">
                     <input
                       type="text"
                       value={row.hsnCode}
                       onChange={(e) => handleRowChange(row.id, { hsnCode: e.target.value })}
-                      className="w-full border border-gray-200 rounded px-2 py-1 font-mono focus:ring-1 focus:ring-blue-500"
+                      placeholder="HSN"
+                      className="w-full border border-gray-300 rounded-md px-1.5 py-1 text-xs text-center font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </td>
-                  <td className="px-3 py-2">
+
+                  {/* 3. Qty */}
+                  <td className="px-2 py-2">
                     <input
                       type="number"
                       step="any"
-                      value={row.qty}
+                      value={row.qty || ''}
                       onChange={(e) => handleRowChange(row.id, { qty: parseFloat(e.target.value) || 0 })}
-                      className="w-full border border-gray-200 rounded px-2 py-1 text-right focus:ring-1 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-md px-1.5 py-1 text-xs text-right font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    {row.unit === 'GROSS' && row.qty > 0 && (
+                      <div className="text-[10px] text-gray-400 text-center mt-0.5 whitespace-nowrap">
+                        ={(row.qty * 144).toFixed(0)} pcs
+                      </div>
+                    )}
                   </td>
-                  <td className="px-3 py-2">
+
+                  {/* 4. Weight */}
+                  <td className="px-2 py-2">
                     <input
                       type="number"
                       step="any"
-                      value={row.weightKg}
+                      value={row.weightKg || ''}
                       onChange={(e) =>
                         handleRowChange(row.id, { weightKg: parseFloat(e.target.value) || 0 })
                       }
-                      className="w-full border border-gray-200 rounded px-2 py-1 text-right focus:ring-1 focus:ring-blue-500"
+                      placeholder="0.000"
+                      className="w-full border border-gray-300 rounded-md px-1.5 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </td>
-                  <td className="px-3 py-2">
+
+                  {/* 5. Unit */}
+                  <td className="px-2 py-2">
                     <select
                       value={row.unit}
                       onChange={(e) => handleRowChange(row.id, { unit: e.target.value as UnitType })}
-                      className="w-full border border-gray-200 rounded px-1.5 py-1 focus:ring-1 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-md px-1 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
                     >
-                      <option value="GROSS">GROSS</option>
                       <option value="PCS">PCS</option>
                       <option value="KG">KG</option>
                       <option value="GRAM">GRAM</option>
+                      <option value="GROSS">GROSS</option>
                     </select>
                   </td>
-                  <td className="px-3 py-2">
+
+                  {/* 6. Rate */}
+                  <td className="px-2 py-2">
                     <input
                       type="number"
                       step="any"
-                      value={row.rate}
+                      value={row.rate || ''}
                       onChange={(e) => handleRowChange(row.id, { rate: parseFloat(e.target.value) || 0 })}
-                      className="w-full border border-gray-200 rounded px-2 py-1 text-right focus:ring-1 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-md px-1.5 py-1 text-xs text-right font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    {row.unit === 'GROSS' && (
+                      <div className="text-[10px] text-gray-400 text-center mt-0.5 whitespace-nowrap">per 144</div>
+                    )}
                   </td>
-                  <td className="px-3 py-2">
+
+                  {/* 7. Discount % */}
+                  <td className="px-2 py-2">
                     <input
                       type="number"
-                      value={row.discountPct}
+                      value={row.discountPct || ''}
                       onChange={(e) =>
                         handleRowChange(row.id, { discountPct: parseFloat(e.target.value) || 0 })
                       }
-                      className="w-full border border-gray-200 rounded px-2 py-1 text-right focus:ring-1 focus:ring-blue-500"
+                      placeholder="0"
+                      className="w-full border border-gray-300 rounded-md px-1 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </td>
-                  <td className="px-3 py-2 text-right font-medium">₹ {row.taxableAmt.toFixed(2)}</td>
-                  <td className="px-3 py-2">
+
+                  {/* 8. Taxable */}
+                  <td className="px-2 py-2 text-right font-mono text-gray-700 text-xs whitespace-nowrap">
+                    ₹{row.taxableAmt.toFixed(2)}
+                  </td>
+
+                  {/* 9. GST % */}
+                  <td className="px-2 py-2">
                     <select
                       value={row.gstRate}
                       onChange={(e) =>
                         handleRowChange(row.id, { gstRate: parseFloat(e.target.value) || 0 })
                       }
-                      className="w-full border border-gray-200 rounded px-1 py-1 text-center focus:ring-1 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-md px-1 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
                     >
                       <option value="0">0%</option>
                       <option value="5">5%</option>
@@ -775,17 +803,28 @@ export default function EditInvoicePage() {
                       <option value="18">18%</option>
                       <option value="28">28%</option>
                     </select>
+                    {(row.cgstAmt > 0 || row.igstAmt > 0) && (
+                      <div className="text-[10px] text-gray-500 text-center font-mono mt-0.5 whitespace-nowrap">
+                        +₹{(row.cgstAmt + row.sgstAmt || row.igstAmt).toFixed(1)}
+                      </div>
+                    )}
                   </td>
-                  <td className="px-3 py-2 text-right font-semibold text-gray-900">
-                    ₹ {row.totalAmt.toFixed(2)}
+
+                  {/* 10. Total */}
+                  <td className="px-2.5 py-2 text-right font-mono font-bold text-blue-700 text-xs whitespace-nowrap">
+                    ₹{row.totalAmt.toFixed(2)}
                   </td>
+
+                  {/* 11. Remove */}
                   <td className="px-2 py-2 text-center">
                     <button
                       type="button"
                       onClick={() => removeRow(row.id)}
-                      className="p-1 text-gray-400 hover:text-red-600 rounded"
+                      disabled={rows.length <= 1}
+                      className="p-1.5 text-gray-400 hover:text-red-600 disabled:opacity-30 rounded hover:bg-red-50 transition-colors"
+                      title="Remove row"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 text-red-500" />
                     </button>
                   </td>
                 </tr>
