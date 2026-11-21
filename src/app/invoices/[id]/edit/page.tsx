@@ -98,6 +98,11 @@ export default function EditInvoicePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorList, setErrorList] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<{
+    party?: boolean;
+    rows: Record<string, { itemId?: boolean; qty?: boolean; rate?: boolean; weightKg?: boolean }>;
+  }>({ rows: {} });
 
   const [invoiceType, setInvoiceType] = useState<InvoiceType>('TAX_INVOICE');
   const [invoiceNo, setInvoiceNo] = useState('');
@@ -183,6 +188,9 @@ export default function EditInvoicePage() {
     if (p) {
       setRows((prev) => prev.map((r) => calcRow(r, p.stateCode)));
     }
+    setFieldErrors(prev => ({ ...prev, party: false }));
+    setErrorList(prev => prev.filter(msg => !msg.includes('ગ્રાહક') && !msg.includes('Customer')));
+    setError(null);
   };
 
   const handleRowChange = (rowId: string, patch: Partial<InvoiceItemRow>) => {
@@ -193,6 +201,16 @@ export default function EditInvoicePage() {
         return calcRow(updated, customerState);
       })
     );
+
+    setFieldErrors(prev => {
+      if (!prev.rows[rowId]) return prev;
+      const rowErrs = { ...prev.rows[rowId] };
+      if (patch.qty !== undefined && Number(patch.qty) > 0) delete rowErrs.qty;
+      if (patch.rate !== undefined && Number(patch.rate) > 0) delete rowErrs.rate;
+      if (patch.weightKg !== undefined && Number(patch.weightKg) > 0) delete rowErrs.weightKg;
+      return { ...prev, rows: { ...prev.rows, [rowId]: rowErrs } };
+    });
+    setError(null);
   };
 
   const handleItemSelect = (rowId: string, itemId: number) => {
@@ -210,6 +228,14 @@ export default function EditInvoicePage() {
       gstRate: Number(item.gstRate),
       weightKg: item.grossWeightKg ? Number(item.grossWeightKg) : 0,
     });
+
+    setFieldErrors(prev => {
+      const rowErrs = prev.rows[rowId] ? { ...prev.rows[rowId] } : {};
+      delete rowErrs.itemId;
+      if (item.saleRate && Number(item.saleRate) > 0) delete rowErrs.rate;
+      return { ...prev, rows: { ...prev.rows, [rowId]: rowErrs } };
+    });
+    setError(null);
   };
 
   const addRow = () => {
@@ -240,6 +266,11 @@ export default function EditInvoicePage() {
   const removeRow = (rowId: string) => {
     if (rows.length === 1) return;
     setRows((prev) => prev.filter((r) => r.id !== rowId));
+    setFieldErrors(prev => {
+      const copy = { ...prev.rows };
+      delete copy[rowId];
+      return { ...prev, rows: copy };
+    });
   };
 
   const subtotal = rows.reduce((s, r) => {
@@ -260,19 +291,71 @@ export default function EditInvoicePage() {
   const roundOff = roundOffEnabled ? parseFloat((grandTotal - rawTotal).toFixed(2)) : 0;
   const words = amountToWords(grandTotal);
 
+  function validateInvoice(): { valid: boolean; summary: string[]; errs: typeof fieldErrors } {
+    const summary: string[] = [];
+    const errs: typeof fieldErrors = { rows: {} };
+
+    if (!partyId) {
+      errs.party = true;
+      summary.push('કૃપા કરીને ગ્રાહક (Customer) પસંદ કરો.');
+    }
+
+    if (rows.length === 0) {
+      summary.push('ઓછામાં ઓછી એક આઈટમ (Item) બિલમાં હોવી જોઈએ.');
+    } else {
+      rows.forEach((r, idx) => {
+        const rowNum = idx + 1;
+        const rowErr: { itemId?: boolean; qty?: boolean; rate?: boolean; weightKg?: boolean } = {};
+
+        if (!r.itemId) {
+          rowErr.itemId = true;
+          summary.push(`લાઈન #${rowNum}: આઈટમ પસંદ કરો.`);
+        }
+        if (Number(r.qty) <= 0) {
+          rowErr.qty = true;
+          summary.push(`લાઈન #${rowNum}: જથ્થો (Qty) 0 થી વધારે હોવો જોઈએ.`);
+        }
+        if (Number(r.rate) <= 0) {
+          rowErr.rate = true;
+          summary.push(`લાઈન #${rowNum}: ભાવ (Rate ₹) 0 થી વધારે દાખલ કરો.`);
+        }
+        if ((r.unit === 'KG' || r.unit === 'GRAM' || r.priceMode === 'WEIGHT') && Number(r.weightKg) <= 0) {
+          rowErr.weightKg = true;
+          summary.push(`લાઈન #${rowNum}: વજન (Weight Kg) 0 થી વધુ હોવું જોઈએ.`);
+        }
+
+        if (Object.keys(rowErr).length > 0) {
+          errs.rows[r.id] = rowErr;
+        }
+      });
+    }
+
+    if (grandTotal <= 0) {
+      summary.push('કુલ બિલ રકમ (Total Amount) ₹0 છે. ખાલી અથવા શૂન્ય રૂપિયાનું બિલ અપડેટ થઈ શકશે નહીં.');
+    }
+
+    return {
+      valid: summary.length === 0,
+      summary,
+      errs,
+    };
+  }
+
   async function handleUpdate(e: React.FormEvent) {
     e.preventDefault();
-    if (!partyId) {
-      setError('Please select a party');
-      return;
-    }
-    if (rows.length === 0 || rows.some((r) => !r.description)) {
-      setError('Please provide item details for all rows');
+    const { valid, summary, errs } = validateInvoice();
+    if (!valid) {
+      setFieldErrors(errs);
+      setErrorList(summary);
+      setError(summary[0]);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    setSaving(true);
+    setFieldErrors({ rows: {} });
+    setErrorList([]);
     setError(null);
+    setSaving(true);
 
     const payload = {
       type: invoiceType,
@@ -379,12 +462,25 @@ export default function EditInvoicePage() {
         </div>
       </div>
 
-      {error && (
+      {/* ── Validation Alerts Banner ── */}
+      {errorList.length > 0 ? (
+        <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 space-y-2 text-red-800 shadow-sm animate-pulse-once">
+          <div className="flex items-center gap-2 font-bold text-sm text-red-900">
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+            <span>ઇન્વોઇસ અપડેટ કરવા માટે નીચેની વિગતો પૂર્ણ કરવી જરૂરી છે:</span>
+          </div>
+          <ul className="list-disc list-inside text-xs space-y-1 pl-2 text-red-700 font-medium">
+            {errorList.map((err, i) => (
+              <li key={i}>{err}</li>
+            ))}
+          </ul>
+        </div>
+      ) : error ? (
         <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           {error}
         </div>
-      )}
+      ) : null}
 
       {/* Invoice Details */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -436,8 +532,15 @@ export default function EditInvoicePage() {
       </div>
 
       {/* Party Selection */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-gray-700">Customer Details</h2>
+      <div className={`bg-white rounded-xl border shadow-sm p-5 space-y-4 transition-colors ${
+        fieldErrors.party ? 'border-red-300 ring-2 ring-red-100' : 'border-gray-200'
+      }`}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-700">Customer Details</h2>
+          {fieldErrors.party && (
+            <span className="text-xs text-red-600 font-medium">* ગ્રાહક પસંદ કરવો ફરજિયાત છે</span>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Select Customer *</label>
@@ -445,7 +548,11 @@ export default function EditInvoicePage() {
               value={partyId || ''}
               onChange={(e) => handlePartyChange(Number(e.target.value))}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-colors ${
+                fieldErrors.party
+                  ? 'border-red-500 bg-red-50/20 ring-2 ring-red-200 focus:ring-red-500 font-medium'
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
             >
               <option value="">Select party...</option>
               {(Array.isArray(parties) ? parties : []).map((p) => (
@@ -454,6 +561,9 @@ export default function EditInvoicePage() {
                 </option>
               ))}
             </select>
+            {fieldErrors.party && (
+              <p className="mt-1 text-xs text-red-600 font-medium">* કૃપા કરીને ગ્રાહક પસંદ કરો</p>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">GSTIN</label>
@@ -469,9 +579,8 @@ export default function EditInvoicePage() {
             <input
               type="text"
               readOnly
-              value={`${selectedParty?.state || 'Gujarat'} (${customerState}) - ${
-                isSameState ? 'CGST+SGST' : 'IGST'
-              }`}
+              value={`${selectedParty?.state || 'Gujarat'} (${customerState}) - ${isSameState ? 'CGST+SGST' : 'IGST'
+                }`}
               className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-600 font-medium"
             />
           </div>
@@ -517,11 +626,17 @@ export default function EditInvoicePage() {
 
               {/* Item Dropdown */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Select Item *</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Select Item <span className="text-red-500">*</span>
+                </label>
                 <select
                   value={row.itemId || ''}
                   onChange={(e) => handleItemSelect(row.id, Number(e.target.value))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 bg-white transition-colors ${
+                    fieldErrors.rows[row.id]?.itemId
+                      ? 'border-red-500 bg-red-50/20 ring-2 ring-red-200 focus:ring-red-500'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 >
                   <option value="">Select item...</option>
                   {(Array.isArray(items) ? items : []).map((it) => (
@@ -530,6 +645,9 @@ export default function EditInvoicePage() {
                     </option>
                   ))}
                 </select>
+                {fieldErrors.rows[row.id]?.itemId && (
+                  <p className="mt-1 text-[11px] text-red-600 font-medium">* આઈટમ પસંદ કરવી જરૂરી છે</p>
+                )}
               </div>
 
               {/* Description */}
@@ -556,18 +674,27 @@ export default function EditInvoicePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Qty</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Qty <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
                     step="any"
                     value={row.qty || ''}
                     onChange={(e) => handleRowChange(row.id, { qty: parseFloat(e.target.value) || 0 })}
-                    className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full border rounded-lg px-2 py-2 text-sm text-right focus:outline-none focus:ring-2 ${
+                      fieldErrors.rows[row.id]?.qty
+                        ? 'border-red-500 bg-red-50/20 ring-2 ring-red-200 focus:ring-red-500'
+                        : 'border-gray-300 focus:ring-blue-500'
+                    }`}
                   />
                   {row.unit === 'GROSS' && row.qty > 0 && (
                     <div className="text-[10px] text-gray-500 text-center mt-0.5 font-medium">
                       ={(row.qty * 144).toFixed(0)} pcs
                     </div>
+                  )}
+                  {fieldErrors.rows[row.id]?.qty && (
+                    <p className="mt-1 text-[10px] text-red-600 text-right">* Qty &gt; 0</p>
                   )}
                 </div>
                 <div>
@@ -597,20 +724,36 @@ export default function EditInvoicePage() {
                       handleRowChange(row.id, { weightKg: parseFloat(e.target.value) || 0 })
                     }
                     placeholder="0.000"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full border rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 ${
+                      fieldErrors.rows[row.id]?.weightKg
+                        ? 'border-red-500 bg-red-50/20 ring-2 ring-red-200 focus:ring-red-500'
+                        : 'border-gray-300 focus:ring-blue-500'
+                    }`}
                   />
+                  {fieldErrors.rows[row.id]?.weightKg && (
+                    <p className="mt-1 text-[10px] text-red-600 text-right">* વજન જરૂરી છે</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Rate (₹)</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Rate (₹) <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
                     step="any"
                     value={row.rate || ''}
                     onChange={(e) => handleRowChange(row.id, { rate: parseFloat(e.target.value) || 0 })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full border rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 ${
+                      fieldErrors.rows[row.id]?.rate
+                        ? 'border-red-500 bg-red-50/20 ring-2 ring-red-200 focus:ring-red-500'
+                        : 'border-gray-300 focus:ring-blue-500'
+                    }`}
                   />
                   {row.unit === 'GROSS' && (
                     <div className="text-[10px] text-gray-400 text-right mt-0.5">per 144 pcs</div>
+                  )}
+                  {fieldErrors.rows[row.id]?.rate && (
+                    <p className="mt-1 text-[10px] text-red-600 text-right">* ભાવ જરૂરી છે</p>
                   )}
                 </div>
               </div>
@@ -683,7 +826,11 @@ export default function EditInvoicePage() {
                     <select
                       value={row.itemId || ''}
                       onChange={(e) => handleItemSelect(row.id, Number(e.target.value))}
-                      className="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                      className={`w-full border rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 bg-white transition-colors ${
+                        fieldErrors.rows[row.id]?.itemId
+                          ? 'border-red-500 bg-red-50/20 ring-1 ring-red-400 focus:ring-red-500 font-medium'
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
                     >
                       <option value="">-- Select Item --</option>
                       {(Array.isArray(items) ? items : []).map((it) => (
@@ -719,7 +866,11 @@ export default function EditInvoicePage() {
                       step="any"
                       value={row.qty || ''}
                       onChange={(e) => handleRowChange(row.id, { qty: parseFloat(e.target.value) || 0 })}
-                      className="w-full border border-gray-300 rounded-md px-1.5 py-1 text-xs text-right font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className={`w-full border rounded-md px-1.5 py-1 text-xs text-right font-medium focus:outline-none focus:ring-1 transition-colors ${
+                        fieldErrors.rows[row.id]?.qty
+                          ? 'border-red-500 bg-red-50/20 ring-1 ring-red-400 focus:ring-red-500'
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
                     />
                     {row.unit === 'GROSS' && row.qty > 0 && (
                       <div className="text-[10px] text-gray-400 text-center mt-0.5 whitespace-nowrap">
@@ -738,7 +889,11 @@ export default function EditInvoicePage() {
                         handleRowChange(row.id, { weightKg: parseFloat(e.target.value) || 0 })
                       }
                       placeholder="0.000"
-                      className="w-full border border-gray-300 rounded-md px-1.5 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className={`w-full border rounded-md px-1.5 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 transition-colors ${
+                        fieldErrors.rows[row.id]?.weightKg
+                          ? 'border-red-500 bg-red-50/20 ring-1 ring-red-400 focus:ring-red-500'
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
                     />
                   </td>
 
@@ -763,7 +918,11 @@ export default function EditInvoicePage() {
                       step="any"
                       value={row.rate || ''}
                       onChange={(e) => handleRowChange(row.id, { rate: parseFloat(e.target.value) || 0 })}
-                      className="w-full border border-gray-300 rounded-md px-1.5 py-1 text-xs text-right font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className={`w-full border rounded-md px-1.5 py-1 text-xs text-right font-medium focus:outline-none focus:ring-1 transition-colors ${
+                        fieldErrors.rows[row.id]?.rate
+                          ? 'border-red-500 bg-red-50/20 ring-1 ring-red-400 focus:ring-red-500'
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
                     />
                     {row.unit === 'GROSS' && (
                       <div className="text-[10px] text-gray-400 text-center mt-0.5 whitespace-nowrap">per 144</div>
