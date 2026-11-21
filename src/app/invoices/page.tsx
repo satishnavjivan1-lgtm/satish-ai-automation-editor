@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { FileText, Plus, Printer, MessageCircle, Eye, Edit } from 'lucide-react';
 import { InvoiceStatusBadge } from '@/components/invoices/InvoiceStatusBadge';
 import { DeleteInvoiceButton } from '@/components/invoices/DeleteInvoiceButton';
+import { WhatsAppShareButton } from '@/components/invoices/WhatsAppShareButton';
 import prisma from '@/lib/prisma';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -118,17 +119,17 @@ export default async function InvoicesPage({ searchParams = {} }: PageProps) {
   const stats = { totalCount: invoices.length, thisMonthSales, pendingAmount };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-6">
 
       {/* ── Page Header ── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <FileText className="h-6 w-6 text-blue-700" />
-          <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Invoices</h1>
         </div>
         <Link
           href="/invoices/new"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-700 text-white text-sm font-medium rounded-lg hover:bg-blue-800 transition-colors"
+          className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-700 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-blue-800 transition-colors shadow-sm"
         >
           <Plus className="h-4 w-4" />
           New Invoice
@@ -136,7 +137,7 @@ export default async function InvoicesPage({ searchParams = {} }: PageProps) {
       </div>
 
       {/* ── Summary Cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <SummaryCard
           label="Total Invoices"
           value={stats.totalCount.toString()}
@@ -170,7 +171,7 @@ export default async function InvoicesPage({ searchParams = {} }: PageProps) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[750px] text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold text-gray-700">Date</th>
@@ -178,8 +179,8 @@ export default async function InvoicesPage({ searchParams = {} }: PageProps) {
                   <th className="px-4 py-3 text-left font-semibold text-gray-700">Party</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-700">Type</th>
                   <th className="px-4 py-3 text-right font-semibold text-gray-700">Total</th>
-                  <th className="px-4 py-3 text-center font-semibold text-gray-700">Status</th>
-                  <th className="px-4 py-3 text-center font-semibold text-gray-700">Actions</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-700 w-28">Status</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-700 w-44">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -221,17 +222,15 @@ export default async function InvoicesPage({ searchParams = {} }: PageProps) {
                           <Edit className="h-4 w-4" />
                         </Link>
                         <DeleteInvoiceButton id={inv.id} invoiceNo={inv.invoiceNo} />
-                        {inv.party.phone && (
-                          <a
-                            href={whatsappUrl(inv.party.phone, inv.invoiceNo, inv.totalAmt)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="WhatsApp"
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-green-600 hover:bg-green-50 transition-colors"
-                          >
-                            <MessageCircle className="h-4 w-4" />
-                          </a>
-                        )}
+                        <WhatsAppShareButton
+                          invoiceId={inv.id}
+                          invoiceNo={inv.invoiceNo}
+                          partyName={inv.party.name}
+                          partyPhone={inv.party.phone || ''}
+                          totalAmt={Number(inv.totalAmt)}
+                          invoiceDate={inv.invoiceDate}
+                          variant="icon"
+                        />
                       </div>
                     </td>
                   </tr>

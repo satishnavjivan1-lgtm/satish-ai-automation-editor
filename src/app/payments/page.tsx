@@ -178,9 +178,8 @@ export default function PaymentsPage() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                tab === t ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === t ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
             >
               {t}
             </button>
@@ -241,62 +240,64 @@ export default function PaymentsPage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                {['Date', 'Party', 'Type', 'Mode', 'Reference', 'Amount', 'Linked Invoice', 'Action'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left font-semibold text-gray-600">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[750px] text-sm">
+              <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-gray-400">
-                    {searchTerm || dateFrom || dateTo || tab !== 'ALL' ? (
-                      <div>
-                        <p className="font-medium text-gray-600">No payments match your filter criteria</p>
-                        <button
-                          onClick={() => { setSearchTerm(''); setDateFrom(''); setDateTo(''); setTab('ALL') }}
-                          className="mt-2 text-sm text-green-600 hover:underline font-medium"
-                        >
-                          Reset filters
-                        </button>
-                      </div>
-                    ) : (
-                      'No payments found'
-                    )}
-                  </td>
+                  {['Date', 'Party', 'Type', 'Mode', 'Reference', 'Amount', 'Linked Invoice', 'Action'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left font-semibold text-gray-600">{h}</th>
+                  ))}
                 </tr>
-              ) : filtered.map(p => (
-                <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{fmtDate(p.paymentDate)}</td>
-                  <td className="px-4 py-3 font-medium text-gray-900">{p.party?.name}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.type === 'RECEIVED' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                      {p.type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">{p.mode}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-400">{p.reference || '—'}</td>
-                  <td className={`px-4 py-3 font-semibold ${p.type === 'RECEIVED' ? 'text-green-700' : 'text-red-700'}`}>
-                    {p.type === 'RECEIVED' ? '+' : '-'}{fmtINR(Number(p.amount))}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-500">{p.invoice?.invoiceNo || '—'}</td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      className="p-1 text-gray-400 hover:text-red-600 hover:bg-gray-100 rounded"
-                      title="Delete Payment"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center py-12 text-gray-400">
+                      {searchTerm || dateFrom || dateTo || tab !== 'ALL' ? (
+                        <div>
+                          <p className="font-medium text-gray-600">No payments match your filter criteria</p>
+                          <button
+                            onClick={() => { setSearchTerm(''); setDateFrom(''); setDateTo(''); setTab('ALL') }}
+                            className="mt-2 text-sm text-green-600 hover:underline font-medium"
+                          >
+                            Reset filters
+                          </button>
+                        </div>
+                      ) : (
+                        'No payments found'
+                      )}
+                    </td>
+                  </tr>
+                ) : filtered.map(p => (
+                  <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{fmtDate(p.paymentDate)}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{p.party?.name}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.type === 'RECEIVED' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                        {p.type}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500">{p.mode}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-400">{p.reference || '—'}</td>
+                    <td className={`px-4 py-3 font-semibold ${p.type === 'RECEIVED' ? 'text-green-700' : 'text-red-700'}`}>
+                      {p.type === 'RECEIVED' ? '+' : '-'}{fmtINR(Number(p.amount))}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{p.invoice?.invoiceNo || '—'}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="p-1 text-gray-400 hover:text-red-600 hover:bg-gray-100 rounded"
+                        title="Delete Payment"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -317,8 +318,8 @@ export default function PaymentsPage() {
                       type="button"
                       onClick={() => setForm({ ...form, type: t, invoiceId: '' })}
                       className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors border ${form.type === t
-                          ? t === 'RECEIVED' ? 'bg-green-600 text-white border-green-600' : 'bg-red-600 text-white border-red-600'
-                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                        ? t === 'RECEIVED' ? 'bg-green-600 text-white border-green-600' : 'bg-red-600 text-white border-red-600'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                         }`}
                     >
                       {t === 'RECEIVED' ? '↓ Received' : '↑ Paid'}

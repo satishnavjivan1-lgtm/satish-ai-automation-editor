@@ -107,7 +107,7 @@ export default function InventoryPage() {
     try {
       const res = await fetch('/api/item-categories')
       if (res.ok) setCategories(await res.json())
-    } catch {}
+    } catch { }
   }
 
   useEffect(() => {
@@ -218,11 +218,10 @@ export default function InventoryPage() {
             <button
               key={cat}
               onClick={() => setFilterCat(cat)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                filterCat === cat
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterCat === cat
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+                }`}
             >
               {cat === 'ALL' ? 'All' : CATEGORY_LABELS[cat]}
             </button>
@@ -279,97 +278,99 @@ export default function InventoryPage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                {[
-                  'Code',
-                  'Name',
-                  'Category',
-                  'HSN',
-                  'Unit',
-                  'Price Mode',
-                  'Current Qty (Pcs)',
-                  'Current Weight (Kg)',
-                  'Sale Rate',
-                  'Min Stock',
-                  'Status',
-                  '',
-                ].map(h => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1000px] text-sm">
+              <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <td colSpan={12} className="text-center py-12 text-gray-400">
-                    {searchTerm || stockFilter !== 'ALL' || filterCat !== 'ALL' ? (
-                      <div>
-                        <p className="font-medium text-gray-600">No items match your filter/search criteria</p>
-                        <button
-                          onClick={() => { setSearchTerm(''); setStockFilter('ALL'); setFilterCat('ALL') }}
-                          className="mt-2 text-sm text-blue-600 hover:underline font-medium"
-                        >
-                          Reset filters
-                        </button>
-                      </div>
-                    ) : (
-                      'No items found'
-                    )}
-                  </td>
+                  {[
+                    'Code',
+                    'Name',
+                    'Category',
+                    'HSN',
+                    'Unit',
+                    'Price Mode',
+                    'Current Qty (Pcs)',
+                    'Current Weight (Kg)',
+                    'Sale Rate',
+                    'Min Stock',
+                    'Status',
+                    '',
+                  ].map(h => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ) : (
-                filtered.map(item => {
-                  const grossQty =
-                    item.priceMode === 'PER_GROSS'
-                      ? Math.floor(item.currentQtyPcs / 144)
-                      : null
-                  return (
-                    <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs text-gray-500">{item.code}</td>
-                      <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700">
-                          {CATEGORY_LABELS[item.category.type]}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500">{item.hsnCode}</td>
-                      <td className="px-4 py-3 text-gray-500">{item.unit}</td>
-                      <td className="px-4 py-3 text-gray-500">{item.priceMode}</td>
-                      <td className="px-4 py-3 font-medium">
-                        {item.currentQtyPcs.toLocaleString('en-IN')}
-                        {grossQty !== null && (
-                          <span className="ml-1 text-xs text-gray-400">({grossQty} gross)</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-blue-700 font-medium">
-                        {fmtWt(Number(item.currentWeightKg))}
-                      </td>
-                      <td className="px-4 py-3">{fmtINR(Number(item.saleRate))}</td>
-                      <td className="px-4 py-3 text-gray-500">{item.minStockQty}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge item={item} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => openEdit(item)}
-                          className="p-1 hover:bg-gray-200 rounded transition-colors text-gray-500"
-                        >
-                          <Edit size={15} />
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={12} className="text-center py-12 text-gray-400">
+                      {searchTerm || stockFilter !== 'ALL' || filterCat !== 'ALL' ? (
+                        <div>
+                          <p className="font-medium text-gray-600">No items match your filter/search criteria</p>
+                          <button
+                            onClick={() => { setSearchTerm(''); setStockFilter('ALL'); setFilterCat('ALL') }}
+                            className="mt-2 text-sm text-blue-600 hover:underline font-medium"
+                          >
+                            Reset filters
+                          </button>
+                        </div>
+                      ) : (
+                        'No items found'
+                      )}
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map(item => {
+                    const grossQty =
+                      item.priceMode === 'PER_GROSS'
+                        ? Math.floor(item.currentQtyPcs / 144)
+                        : null
+                    return (
+                      <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs text-gray-500">{item.code}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700">
+                            {CATEGORY_LABELS[item.category.type]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-500">{item.hsnCode}</td>
+                        <td className="px-4 py-3 text-gray-500">{item.unit}</td>
+                        <td className="px-4 py-3 text-gray-500">{item.priceMode}</td>
+                        <td className="px-4 py-3 font-medium">
+                          {item.currentQtyPcs.toLocaleString('en-IN')}
+                          {grossQty !== null && (
+                            <span className="ml-1 text-xs text-gray-400">({grossQty} gross)</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-blue-700 font-medium">
+                          {fmtWt(Number(item.currentWeightKg))}
+                        </td>
+                        <td className="px-4 py-3">{fmtINR(Number(item.saleRate))}</td>
+                        <td className="px-4 py-3 text-gray-500">{item.minStockQty}</td>
+                        <td className="px-4 py-3">
+                          <StatusBadge item={item} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => openEdit(item)}
+                            className="p-1 hover:bg-gray-200 rounded transition-colors text-gray-500"
+                          >
+                            <Edit size={15} />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

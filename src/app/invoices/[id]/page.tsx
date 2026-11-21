@@ -4,6 +4,7 @@ import { ArrowLeft, MessageCircle, Edit } from 'lucide-react';
 import { InvoiceStatusBadge } from '@/components/invoices/InvoiceStatusBadge';
 import { PrintInvoice } from '@/components/invoices/PrintInvoice';
 import { PrintButton } from '@/components/invoices/PrintButton';
+import { WhatsAppShareButton } from '@/components/invoices/WhatsAppShareButton';
 import prisma from '@/lib/prisma';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -178,19 +179,19 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
   return (
     <>
       {/* ── Action Bar (hidden on print) ── */}
-      <div className="no-print bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-3">
+      <div className="no-print bg-white border-b border-gray-200 px-3.5 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-10">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/invoices"
-            className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+            className="p-1.5 sm:p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-900 font-mono">{invoice.invoiceNo}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <span className="font-bold text-gray-900 font-mono text-sm sm:text-base">{invoice.invoiceNo}</span>
               <InvoiceStatusBadge status={invoice.status} />
-              <span className="text-xs text-gray-500">{typeLabel(invoice.type)}</span>
+              <span className="text-xs text-gray-500 hidden sm:inline">{typeLabel(invoice.type)}</span>
             </div>
             <div className="text-xs text-gray-500">
               {fmtDate(invoice.invoiceDate)}{invoice.dueDate ? ` · Due: ${fmtDate(invoice.dueDate)}` : ''}
@@ -198,57 +199,56 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Link
             href={`/invoices/${params.id}/edit`}
-            className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-gray-100 text-gray-700 text-xs sm:text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
           >
             <Edit className="h-4 w-4" />
-            Edit
+            <span className="hidden xs:inline">Edit</span>
           </Link>
 
-          {invoice.party.phone && (
-            <a
-              href={whatsappUrl(invoice.party.phone, invoice.invoiceNo, Number(invoice.totalAmt))}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <MessageCircle className="h-4 w-4" />
-              WhatsApp Reminder
-            </a>
-          )}
+          <WhatsAppShareButton
+            invoiceId={invoice.id}
+            invoiceNo={invoice.invoiceNo}
+            partyName={invoice.party.name}
+            partyPhone={invoice.party.phone || ''}
+            totalAmt={Number(invoice.totalAmt)}
+            invoiceDate={invoice.invoiceDate}
+            companyName={company.name}
+            variant="button"
+          />
 
           <PrintButton />
         </div>
       </div>
 
       {/* ── Summary (screen-only) ── */}
-      <div className="no-print p-6">
+      <div className="no-print p-3.5 sm:p-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <InfoCard label="Party"      value={invoice.party.name} />
-          <InfoCard label="Total"      value={fmtMoney(Number(invoice.totalAmt))} highlight />
-          <InfoCard label="GST Type"   value={isSameState ? 'CGST + SGST' : 'IGST'} />
-          <InfoCard label="Items"      value={`${invoice.items.length} line(s)`} />
+          <InfoCard label="Party" value={invoice.party.name} />
+          <InfoCard label="Total" value={fmtMoney(Number(invoice.totalAmt))} highlight />
+          <InfoCard label="GST Type" value={isSameState ? 'CGST + SGST' : 'IGST'} />
+          <InfoCard label="Items" value={`${invoice.items.length} line(s)`} />
         </div>
 
         {/* GST breakdown summary */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 max-w-sm ml-auto space-y-2 text-sm mb-6">
-          <Row label="Subtotal"      value={fmtMoney(Number(invoice.subtotal))} />
+          <Row label="Subtotal" value={fmtMoney(Number(invoice.subtotal))} />
           {Number(invoice.discountAmt) > 0 && (
-            <Row label="Discount"    value={`- ${fmtMoney(Number(invoice.discountAmt))}`} />
+            <Row label="Discount" value={`- ${fmtMoney(Number(invoice.discountAmt))}`} />
           )}
-          <Row label="Taxable"       value={fmtMoney(Number(invoice.taxableAmt))} />
+          <Row label="Taxable" value={fmtMoney(Number(invoice.taxableAmt))} />
           {isSameState ? (
             <>
-              <Row label="CGST"      value={fmtMoney(Number(invoice.cgstAmt))} />
-              <Row label="SGST"      value={fmtMoney(Number(invoice.sgstAmt))} />
+              <Row label="CGST" value={fmtMoney(Number(invoice.cgstAmt))} />
+              <Row label="SGST" value={fmtMoney(Number(invoice.sgstAmt))} />
             </>
           ) : (
-            <Row label="IGST"        value={fmtMoney(Number(invoice.igstAmt))} />
+            <Row label="IGST" value={fmtMoney(Number(invoice.igstAmt))} />
           )}
           {Number(invoice.roundOff) !== 0 && (
-            <Row label="Round Off"   value={(Number(invoice.roundOff) >= 0 ? '+' : '') + fmtMoney(Number(invoice.roundOff))} />
+            <Row label="Round Off" value={(Number(invoice.roundOff) >= 0 ? '+' : '') + fmtMoney(Number(invoice.roundOff))} />
           )}
           <div className="border-t pt-2 flex justify-between font-bold text-blue-700">
             <span>TOTAL</span>
@@ -261,46 +261,46 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
       {/* ── Print View (always rendered, hidden on screen via print CSS) ── */}
       <PrintInvoice
         invoice={{
-          invoiceNo:    invoice.invoiceNo,
-          type:         invoice.type,
-          invoiceDate:  invoice.invoiceDate,
-          dueDate:      invoice.dueDate ?? undefined,
-          gstType:      invoice.gstType,
-          subtotal:     Number(invoice.subtotal),
-          discountAmt:  Number(invoice.discountAmt),
-          taxableAmt:   Number(invoice.taxableAmt),
-          cgstAmt:      Number(invoice.cgstAmt),
-          sgstAmt:      Number(invoice.sgstAmt),
-          igstAmt:      Number(invoice.igstAmt),
-          roundOff:     Number(invoice.roundOff),
-          totalAmt:     Number(invoice.totalAmt),
+          invoiceNo: invoice.invoiceNo,
+          type: invoice.type,
+          invoiceDate: invoice.invoiceDate,
+          dueDate: invoice.dueDate ?? undefined,
+          gstType: invoice.gstType,
+          subtotal: Number(invoice.subtotal),
+          discountAmt: Number(invoice.discountAmt),
+          taxableAmt: Number(invoice.taxableAmt),
+          cgstAmt: Number(invoice.cgstAmt),
+          sgstAmt: Number(invoice.sgstAmt),
+          igstAmt: Number(invoice.igstAmt),
+          roundOff: Number(invoice.roundOff),
+          totalAmt: Number(invoice.totalAmt),
           amountInWords: invoice.amountInWords,
-          notes:        invoice.notes ?? undefined,
+          notes: invoice.notes ?? undefined,
         }}
         company={{
-          name:               company.name,
-          logoUrl:            company.logoUrl,
-          address:            company.address,
-          city:               company.city,
-          state:              company.state,
-          gstin:              company.gstin,
-          phone:              company.phone,
-          email:              company.email,
-          bankName:           company.bankName,
-          branch:             company.branch,
-          accountNo:          company.accountNo,
-          ifscCode:           company.ifscCode,
-          upiId:              company.upiId,
+          name: company.name,
+          logoUrl: company.logoUrl,
+          address: company.address,
+          city: company.city,
+          state: company.state,
+          gstin: company.gstin,
+          phone: company.phone,
+          email: company.email,
+          bankName: company.bankName,
+          branch: company.branch,
+          accountNo: company.accountNo,
+          ifscCode: company.ifscCode,
+          upiId: company.upiId,
           termsAndConditions: company.termsAndConditions,
         }}
         party={{
-          name:      invoice.party.name,
-          address:   invoice.party.address,
-          city:      invoice.party.city,
-          state:     invoice.party.state,
+          name: invoice.party.name,
+          address: invoice.party.address,
+          city: invoice.party.city,
+          state: invoice.party.state,
           stateCode: invoice.party.stateCode,
-          gstin:     invoice.party.gstin ?? undefined,
-          phone:     invoice.party.phone,
+          gstin: invoice.party.gstin ?? undefined,
+          phone: invoice.party.phone,
         }}
         items={printItems}
       />

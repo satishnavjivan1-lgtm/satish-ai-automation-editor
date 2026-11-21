@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Plus, Trash2, ArrowLeft, Save, AlertCircle } from 'lucide-react';
 import { amountToWords } from '@/lib/amountInWords';
 import { calculateLineItem, getItemMultiplier } from '@/lib/gst';
+import { ActionLoader } from '@/components/common/ActionLoader';
 
 type InvoiceType = 'TAX_INVOICE' | 'QUOTATION' | 'DELIVERY_CHALLAN';
 type UnitType = 'PCS' | 'KG' | 'GRAM' | 'GROSS';
@@ -127,8 +128,8 @@ export default function EditInvoicePage() {
           invRes.json(),
         ]);
 
-        setParties(pData);
-        setItems(iData);
+        setParties(Array.isArray(pData) ? pData : (Array.isArray(pData?.parties) ? pData.parties : []));
+        setItems(Array.isArray(iData) ? iData : (Array.isArray(iData?.items) ? iData.items : []));
 
         if (invData && !invData.error) {
           setInvoiceType(invData.type || 'TAX_INVOICE');
@@ -176,7 +177,8 @@ export default function EditInvoicePage() {
 
   const handlePartyChange = (pId: number) => {
     setPartyId(pId);
-    const p = parties.find((x) => x.id === pId) || null;
+    const list = Array.isArray(parties) ? parties : [];
+    const p = list.find((x) => x.id === pId) || null;
     setSelectedParty(p);
     if (p) {
       setRows((prev) => prev.map((r) => calcRow(r, p.stateCode)));
@@ -194,7 +196,8 @@ export default function EditInvoicePage() {
   };
 
   const handleItemSelect = (rowId: string, itemId: number) => {
-    const item = items.find((x) => x.id === itemId);
+    const list = Array.isArray(items) ? items : [];
+    const item = list.find((x) => x.id === itemId);
     if (!item) return;
 
     handleRowChange(rowId, {
@@ -336,7 +339,14 @@ export default function EditInvoicePage() {
   }
 
   return (
-    <form onSubmit={handleUpdate} className="p-6 max-w-7xl mx-auto space-y-6 pb-24">
+    <form onSubmit={handleUpdate} className="p-3.5 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-24">
+      {/* ── Global Action Loader ── */}
+      <ActionLoader
+        isOpen={saving}
+        title="ઇન્વોઇસ અપડેટ થઈ રહ્યું છે..."
+        subtitle="કૃપા કરીને રાહ જુઓ, સ્ટોક અને રેટ્સ સેવ થઈ રહ્યા છે..."
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -438,7 +448,7 @@ export default function EditInvoicePage() {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select party...</option>
-              {parties.map((p) => (
+              {(Array.isArray(parties) ? parties : []).map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
@@ -471,18 +481,185 @@ export default function EditInvoicePage() {
       {/* Items Table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">Line Items &amp; Dual-Unit Gross System</h2>
+          <h2 className="text-sm font-semibold text-gray-700">Line Items &amp; Dual-Unit Gross System ({rows.length})</h2>
           <button
             type="button"
             onClick={addRow}
-            className="inline-flex items-center gap-1.5 text-xs text-blue-700 hover:text-blue-900 font-medium bg-blue-50 px-3 py-1.5 rounded-lg"
+            className="inline-flex items-center gap-1.5 text-xs text-blue-700 hover:text-blue-900 font-semibold bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
           >
             <Plus className="h-4 w-4" /> Add Item
           </button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+        {/* ── Mobile View: Spacious Item Cards (md:hidden) ── */}
+        <div className="md:hidden divide-y divide-gray-200">
+          {rows.map((row, i) => (
+            <div key={row.id} className="p-3.5 space-y-3 bg-white">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                  Item #{i + 1}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                    ₹{row.totalAmt.toFixed(2)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeRow(row.id)}
+                    disabled={rows.length <= 1}
+                    className="p-1.5 text-gray-400 hover:text-red-600 disabled:opacity-30 rounded-lg hover:bg-red-50 transition-colors"
+                    title="Remove item"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Item Dropdown */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Select Item *</label>
+                <select
+                  value={row.itemId || ''}
+                  onChange={(e) => handleItemSelect(row.id, Number(e.target.value))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="">Select item...</option>
+                  {(Array.isArray(items) ? items : []).map((it) => (
+                    <option key={it.id} value={it.id}>
+                      {it.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                <input
+                  type="text"
+                  value={row.description}
+                  onChange={(e) => handleRowChange(row.id, { description: e.target.value })}
+                  placeholder="Item description"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Row 1: HSN, Qty, Unit */}
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">HSN</label>
+                  <input
+                    type="text"
+                    value={row.hsnCode}
+                    onChange={(e) => handleRowChange(row.id, { hsnCode: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Qty</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={row.qty || ''}
+                    onChange={(e) => handleRowChange(row.id, { qty: parseFloat(e.target.value) || 0 })}
+                    className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {row.unit === 'GROSS' && row.qty > 0 && (
+                    <div className="text-[10px] text-gray-500 text-center mt-0.5 font-medium">
+                      ={(row.qty * 144).toFixed(0)} pcs
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Unit</label>
+                  <select
+                    value={row.unit}
+                    onChange={(e) => handleRowChange(row.id, { unit: e.target.value as UnitType })}
+                    className="w-full border border-gray-300 rounded-lg px-1 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="GROSS">GROSS</option>
+                    <option value="PCS">PCS</option>
+                    <option value="KG">KG</option>
+                    <option value="GRAM">GRAM</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 2: Weight, Rate */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Weight (Kg)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={row.weightKg || ''}
+                    onChange={(e) =>
+                      handleRowChange(row.id, { weightKg: parseFloat(e.target.value) || 0 })
+                    }
+                    placeholder="0.000"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Rate (₹)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={row.rate || ''}
+                    onChange={(e) => handleRowChange(row.id, { rate: parseFloat(e.target.value) || 0 })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {row.unit === 'GROSS' && (
+                    <div className="text-[10px] text-gray-400 text-right mt-0.5">per 144 pcs</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 3: Disc %, GST Rate */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Disc %</label>
+                  <input
+                    type="number"
+                    value={row.discountPct || ''}
+                    onChange={(e) =>
+                      handleRowChange(row.id, { discountPct: parseFloat(e.target.value) || 0 })
+                    }
+                    placeholder="0"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">GST Rate</label>
+                  <select
+                    value={row.gstRate}
+                    onChange={(e) =>
+                      handleRowChange(row.id, { gstRate: parseFloat(e.target.value) || 0 })
+                    }
+                    className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="0">0%</option>
+                    <option value="5">5%</option>
+                    <option value="12">12%</option>
+                    <option value="18">18%</option>
+                    <option value="28">28%</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Card Calculation Breakdown */}
+              <div className="bg-gray-50 rounded-lg p-2.5 text-xs text-gray-700 flex items-center justify-between font-mono">
+                <div>Taxable: ₹{row.taxableAmt.toFixed(2)}</div>
+                <div>{isSameState ? `C+S: ₹${(row.cgstAmt + row.sgstAmt).toFixed(2)}` : `IGST: ₹${row.igstAmt.toFixed(2)}`}</div>
+                <div className="font-bold text-blue-700">₹{row.totalAmt.toFixed(2)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Desktop View: Full Spreadsheet Table (hidden md:block) ── */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="min-w-[1050px] w-full text-xs">
             <thead className="bg-gray-50 border-b border-gray-200 text-gray-600">
               <tr>
                 <th className="px-3 py-2.5 text-left w-8">#</th>
@@ -510,7 +687,7 @@ export default function EditInvoicePage() {
                       className="w-full border border-gray-200 rounded px-2 py-1 mb-1 focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="">Select item...</option>
-                      {items.map((it) => (
+                      {(Array.isArray(items) ? items : []).map((it) => (
                         <option key={it.id} value={it.id}>
                           {it.name}
                         </option>

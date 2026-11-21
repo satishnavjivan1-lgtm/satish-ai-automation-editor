@@ -257,65 +257,67 @@ export default function ExpensesPage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                {['Date', 'Category', 'Description', 'Vendor', 'Amount', 'Mode', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left font-semibold text-gray-600">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {expenses.length === 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px] text-sm">
+              <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-gray-400">
-                    {filterCat || dateFrom || dateTo || searchTerm ? (
-                      <div>
-                        <p className="font-medium text-gray-600">No expenses match your search/filter</p>
-                        <button
-                          onClick={() => { setFilterCat(''); setDateFrom(''); setDateTo(''); setSearchTerm('') }}
-                          className="mt-2 text-sm text-rose-600 hover:underline font-medium"
-                        >
-                          Reset filters
-                        </button>
-                      </div>
-                    ) : (
-                      'No expenses found'
-                    )}
-                  </td>
+                  {['Date', 'Category', 'Description', 'Vendor', 'Amount', 'Mode', 'Actions'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left font-semibold text-gray-600">{h}</th>
+                  ))}
                 </tr>
-              ) : expenses.map(exp => (
-                <tr key={exp.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{fmtDate(exp.date)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${catColor[exp.category] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {exp.category.replace(/_/g, ' ')}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-700">{exp.description}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{exp.vendor?.name || '—'}</td>
-                  <td className="px-4 py-3 font-semibold text-rose-700">{fmtINR(Number(exp.amount))}</td>
-                  <td className="px-4 py-3 text-gray-500">{exp.mode}</td>
-                  <td className="px-4 py-3 flex items-center gap-2">
-                    <button
-                      onClick={() => openEdit(exp)}
-                      className="p-1 text-gray-500 hover:text-rose-600 hover:bg-gray-100 rounded"
-                      title="Edit Expense"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(exp.id)}
-                      className="p-1 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded"
-                      title="Delete Expense"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {expenses.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-12 text-gray-400">
+                      {filterCat || dateFrom || dateTo || searchTerm ? (
+                        <div>
+                          <p className="font-medium text-gray-600">No expenses match your search/filter</p>
+                          <button
+                            onClick={() => { setFilterCat(''); setDateFrom(''); setDateTo(''); setSearchTerm('') }}
+                            className="mt-2 text-sm text-rose-600 hover:underline font-medium"
+                          >
+                            Reset filters
+                          </button>
+                        </div>
+                      ) : (
+                        'No expenses found'
+                      )}
+                    </td>
+                  </tr>
+                ) : expenses.map(exp => (
+                  <tr key={exp.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{fmtDate(exp.date)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${catColor[exp.category] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {exp.category.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">{exp.description}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{exp.vendor?.name || '—'}</td>
+                    <td className="px-4 py-3 font-semibold text-rose-700">{fmtINR(Number(exp.amount))}</td>
+                    <td className="px-4 py-3 text-gray-500">{exp.mode}</td>
+                    <td className="px-4 py-3 flex items-center gap-2">
+                      <button
+                        onClick={() => openEdit(exp)}
+                        className="p-1 text-gray-500 hover:text-rose-600 hover:bg-gray-100 rounded"
+                        title="Edit Expense"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(exp.id)}
+                        className="p-1 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded"
+                        title="Delete Expense"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

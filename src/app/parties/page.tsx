@@ -215,7 +215,8 @@ export default function PartiesPage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px] text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 {['Name', 'GSTIN', 'State', 'Phone', 'Credit Limit', 'Current Balance', 'Actions'].map(h => (
@@ -283,6 +284,7 @@ export default function PartiesPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, Trash2, ChevronDown, Save, Send, Printer, AlertCircle } from 'lucide-react';
 import { amountToWords } from '@/lib/amountInWords';
 import { calculateLineItem, getItemMultiplier } from '@/lib/gst';
+import { ActionLoader } from '@/components/common/ActionLoader';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -129,31 +130,31 @@ export default function NewInvoicePage() {
   const router = useRouter();
 
   // Header state
-  const [invoiceType, setInvoiceType]     = useState<InvoiceType>('TAX_INVOICE');
-  const [invoiceDate, setInvoiceDate]     = useState(todayStr());
-  const [dueDate, setDueDate]             = useState('');
-  const [invoiceNo, setInvoiceNo]         = useState('');
+  const [invoiceType, setInvoiceType] = useState<InvoiceType>('TAX_INVOICE');
+  const [invoiceDate, setInvoiceDate] = useState(todayStr());
+  const [dueDate, setDueDate] = useState('');
+  const [invoiceNo, setInvoiceNo] = useState('');
   const [invoiceNoLoading, setInvoiceNoLoading] = useState(true);
 
   // Party state
-  const [parties, setParties]             = useState<Party[]>([]);
-  const [partyId, setPartyId]             = useState<number | null>(null);
-  const [partySearch, setPartySearch]     = useState('');
+  const [parties, setParties] = useState<Party[]>([]);
+  const [partyId, setPartyId] = useState<number | null>(null);
+  const [partySearch, setPartySearch] = useState('');
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
 
   // Items catalog
-  const [catalog, setCatalog]             = useState<Item[]>([]);
+  const [catalog, setCatalog] = useState<Item[]>([]);
 
   // Invoice rows
-  const [rows, setRows]                   = useState<InvoiceItemRow[]>([newRow()]);
+  const [rows, setRows] = useState<InvoiceItemRow[]>([newRow()]);
 
   // Options
   const [enableRoundOff, setEnableRoundOff] = useState(true);
-  const [notes, setNotes]                   = useState('');
+  const [notes, setNotes] = useState('');
 
   // Saving state
-  const [saving, setSaving]               = useState<null | 'draft' | 'send' | 'print'>(null);
-  const [error, setError]                 = useState('');
+  const [saving, setSaving] = useState<null | 'draft' | 'send' | 'print'>(null);
+  const [error, setError] = useState('');
 
   // ── Fetch auto invoice number ──
   useEffect(() => {
@@ -168,14 +169,24 @@ export default function NewInvoicePage() {
   useEffect(() => {
     fetch('/api/parties?type=CUSTOMER')
       .then(r => r.json())
-      .then(d => setParties(d.parties ?? d ?? []));
+      .then(d => {
+        if (Array.isArray(d)) setParties(d);
+        else if (Array.isArray(d?.parties)) setParties(d.parties);
+        else setParties([]);
+      })
+      .catch(() => setParties([]));
   }, []);
 
   // ── Fetch catalog ──
   useEffect(() => {
     fetch('/api/items?active=1')
       .then(r => r.json())
-      .then(d => setCatalog(d.items ?? d ?? []));
+      .then(d => {
+        if (Array.isArray(d)) setCatalog(d);
+        else if (Array.isArray(d?.items)) setCatalog(d.items);
+        else setCatalog([]);
+      })
+      .catch(() => setCatalog([]));
   }, []);
 
   // ── Recalculate all rows when customer state changes ──
@@ -188,12 +199,13 @@ export default function NewInvoicePage() {
 
   useEffect(() => {
     setRows(prev => recalcRows(prev, customerState));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerState]);
 
   // ── Party select ──
   function handlePartySelect(id: number) {
-    const p = parties.find(x => x.id === id) ?? null;
+    const list = Array.isArray(parties) ? parties : [];
+    const p = list.find(x => x.id === id) ?? null;
     setPartyId(id);
     setSelectedParty(p);
     setPartySearch(p?.name ?? '');
@@ -201,7 +213,8 @@ export default function NewInvoicePage() {
 
   // ── Item row handlers ──
   function handleItemSelect(rowId: string, itemId: number) {
-    const item = catalog.find(i => i.id === itemId);
+    const cat = Array.isArray(catalog) ? catalog : [];
+    const item = cat.find(i => i.id === itemId);
     if (!item) return;
     setRows(prev => prev.map(r => {
       if (r.id !== rowId) return r;
@@ -239,7 +252,7 @@ export default function NewInvoicePage() {
   }
 
   // ── Totals ──
-  const subtotal      = rows.reduce((s, r) => {
+  const subtotal = rows.reduce((s, r) => {
     const mult = getItemMultiplier(r.qty, r.weightKg, r.unit, r.priceMode);
     return s + (mult * (Number(r.rate) || 0));
   }, 0);
@@ -247,13 +260,13 @@ export default function NewInvoicePage() {
     const mult = getItemMultiplier(r.qty, r.weightKg, r.unit, r.priceMode);
     return s + (mult * (Number(r.rate) || 0) * (Number(r.discountPct) || 0) / 100);
   }, 0);
-  const totalTaxable  = rows.reduce((s, r) => s + r.taxableAmt, 0);
-  const totalCGST     = rows.reduce((s, r) => s + r.cgstAmt, 0);
-  const totalSGST     = rows.reduce((s, r) => s + r.sgstAmt, 0);
-  const totalIGST     = rows.reduce((s, r) => s + r.igstAmt, 0);
-  const grandTotal    = totalTaxable + totalCGST + totalSGST + totalIGST;
-  const roundOff      = enableRoundOff ? parseFloat((Math.round(grandTotal) - grandTotal).toFixed(2)) : 0;
-  const finalTotal    = enableRoundOff ? Math.round(grandTotal) : grandTotal;
+  const totalTaxable = rows.reduce((s, r) => s + r.taxableAmt, 0);
+  const totalCGST = rows.reduce((s, r) => s + r.cgstAmt, 0);
+  const totalSGST = rows.reduce((s, r) => s + r.sgstAmt, 0);
+  const totalIGST = rows.reduce((s, r) => s + r.igstAmt, 0);
+  const grandTotal = totalTaxable + totalCGST + totalSGST + totalIGST;
+  const roundOff = enableRoundOff ? parseFloat((Math.round(grandTotal) - grandTotal).toFixed(2)) : 0;
+  const finalTotal = enableRoundOff ? Math.round(grandTotal) : grandTotal;
 
   // ── Save ──
   async function handleSave(status: 'DRAFT' | 'SENT') {
@@ -332,13 +345,25 @@ export default function NewInvoicePage() {
 
   // ── Render ──
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 pb-24">
+    <div className="p-3.5 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-36 lg:pb-24">
+      {/* ── Global Action Loader ── */}
+      <ActionLoader
+        isOpen={!!saving}
+        title={
+          saving === 'draft'
+            ? 'Draft ઇન્વોઇસ સેવ થઈ રહ્યું છે...'
+            : saving === 'send'
+            ? 'ઇન્વોઇસ સેવ થઈ રહ્યું છે...'
+            : 'પ્રિન્ટ / PDF ઇન્વોઇસ તૈયાર થઈ રહ્યું છે...'
+        }
+        subtitle="કૃપા કરીને રાહ જુઓ, સ્ટોક અને GST ગણતરી પ્રોસેસ થઈ રહી છે..."
+      />
+
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">New Invoice</h1>
-        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-          isSameState ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-        }`}>
+        <span className={`text-xs px-2 py-1 rounded-full font-medium ${isSameState ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+          }`}>
           {isSameState ? 'CGST + SGST (Same State)' : 'IGST (Inter-State)'}
         </span>
       </div>
@@ -410,7 +435,7 @@ export default function NewInvoicePage() {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
               >
                 <option value="">-- Select Customer --</option>
-                {parties.map(p => (
+                {(Array.isArray(parties) ? parties : []).map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
@@ -437,30 +462,209 @@ export default function NewInvoicePage() {
         </div>
       </div>
 
-      {/* ── Section 3: Items Table ── */}
+      {/* ── Section 3: Items (Mobile Cards & Desktop Table) ── */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">Items</h2>
+        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">
+            Items ({rows.length})
+          </h2>
+          <button
+            type="button"
+            onClick={addRow}
+            className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-blue-700 hover:text-blue-900 font-semibold bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add Item
+          </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+
+        {/* ── Mobile View: Spacious Item Cards (md:hidden) ── */}
+        <div className="md:hidden divide-y divide-gray-200">
+          {rows.map((row, idx) => (
+            <div key={row.id} className="p-3.5 space-y-3 bg-white">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                  Item #{idx + 1}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                    ₹{row.totalAmt.toFixed(2)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeRow(row.id)}
+                    disabled={rows.length <= 1}
+                    className="p-1.5 text-gray-400 hover:text-red-600 disabled:opacity-30 rounded-lg hover:bg-red-50 transition-colors"
+                    title="Remove item"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Item Selector */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Select Item *</label>
+                <div className="relative">
+                  <select
+                    value={row.itemId ?? ''}
+                    onChange={e => handleItemSelect(row.id, Number(e.target.value))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white appearance-none pr-8"
+                  >
+                    <option value="">-- Select Item --</option>
+                    {(Array.isArray(catalog) ? catalog : []).map(item => (
+                      <option key={item.id} value={item.id}>{item.name} ({item.code})</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                <input
+                  type="text"
+                  value={row.description}
+                  onChange={e => handleRowChange(row.id, 'description', e.target.value)}
+                  placeholder="Item Description"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Row 1: HSN, Qty, Unit */}
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">HSN</label>
+                  <input
+                    type="text"
+                    value={row.hsnCode}
+                    onChange={e => handleRowChange(row.id, 'hsnCode', e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Qty</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={row.qty || ''}
+                    onChange={e => handleRowChange(row.id, 'qty', parseFloat(e.target.value) || 0)}
+                    className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {row.unit === 'GROSS' && row.qty > 0 && (
+                    <div className="text-[10px] text-gray-500 text-center mt-0.5 font-medium">
+                      ={(row.qty * 144).toFixed(0)} pcs
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Unit</label>
+                  <select
+                    value={row.unit}
+                    onChange={e => handleRowChange(row.id, 'unit', e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-1 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="PCS">PCS</option>
+                    <option value="KG">KG</option>
+                    <option value="GRAM">GRAM</option>
+                    <option value="GROSS">GROSS</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 2: Weight (Kg), Rate (₹) */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Weight (Kg)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    value={row.weightKg || ''}
+                    onChange={e => handleRowChange(row.id, 'weightKg', parseFloat(e.target.value) || 0)}
+                    placeholder="0.000"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Rate (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={row.rate || ''}
+                    onChange={e => handleRowChange(row.id, 'rate', parseFloat(e.target.value) || 0)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {row.unit === 'GROSS' && (
+                    <div className="text-[10px] text-gray-400 text-right mt-0.5">per 144 pcs</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 3: Disc %, GST Rate */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Disc %</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={row.discountPct || ''}
+                    onChange={e => handleRowChange(row.id, 'discountPct', parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">GST Rate</label>
+                  <select
+                    value={row.gstRate}
+                    onChange={e => handleRowChange(row.id, 'gstRate', parseFloat(e.target.value))}
+                    className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value={0}>0%</option>
+                    <option value={5}>5%</option>
+                    <option value={12}>12%</option>
+                    <option value={18}>18%</option>
+                    <option value={28}>28%</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Card Calculation Breakdown */}
+              <div className="bg-gray-50 rounded-lg p-2.5 text-xs text-gray-700 flex items-center justify-between font-mono">
+                <div>Taxable: ₹{row.taxableAmt.toFixed(2)}</div>
+                <div>{isSameState ? `C+S: ₹${(row.cgstAmt + row.sgstAmt).toFixed(2)}` : `IGST: ₹${row.igstAmt.toFixed(2)}`}</div>
+                <div className="font-bold text-blue-700">₹{row.totalAmt.toFixed(2)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Desktop View: Full Spreadsheet Table (hidden md:block) ── */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="min-w-[1050px] w-full text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-3 py-2 text-left font-semibold text-gray-600 min-w-[160px]">Item</th>
-                <th className="px-3 py-2 text-left font-semibold text-gray-600 min-w-[140px]">Description</th>
-                <th className="px-3 py-2 text-center font-semibold text-gray-600 w-20">HSN</th>
-                <th className="px-3 py-2 text-center font-semibold text-gray-600 w-20">Qty</th>
-                <th className="px-3 py-2 text-center font-semibold text-gray-600 w-20">Wt(Kg)</th>
-                <th className="px-3 py-2 text-center font-semibold text-gray-600 w-16">Unit</th>
-                <th className="px-3 py-2 text-right font-semibold text-gray-600 w-24">Rate</th>
-                <th className="px-3 py-2 text-center font-semibold text-gray-600 w-16">Disc%</th>
-                <th className="px-3 py-2 text-right font-semibold text-gray-600 w-24">Taxable</th>
-                <th className="px-3 py-2 text-center font-semibold text-gray-600 w-16">GST%</th>
-                <th className="px-3 py-2 text-right font-semibold text-gray-600 w-24">
+                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 min-w-[160px]">Item</th>
+                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 min-w-[140px]">Description</th>
+                <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-20">HSN</th>
+                <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-20">Qty</th>
+                <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-20">Wt(Kg)</th>
+                <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-16">Unit</th>
+                <th className="px-3 py-2.5 text-right font-semibold text-gray-600 w-24">Rate</th>
+                <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-16">Disc%</th>
+                <th className="px-3 py-2.5 text-right font-semibold text-gray-600 w-24">Taxable</th>
+                <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-16">GST%</th>
+                <th className="px-3 py-2.5 text-right font-semibold text-gray-600 w-24">
                   {isSameState ? 'CGST / SGST' : 'IGST'}
                 </th>
-                <th className="px-3 py-2 text-right font-semibold text-gray-600 w-24">Total</th>
-                <th className="px-3 py-2 w-8" />
+                <th className="px-3 py-2.5 text-right font-semibold text-gray-600 w-24">Total</th>
+                <th className="px-3 py-2.5 w-8" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -478,7 +682,8 @@ export default function NewInvoicePage() {
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-3 border-t border-gray-100">
+
+        <div className="px-4 sm:px-5 py-3 border-t border-gray-100">
           <button
             type="button"
             onClick={addRow}
@@ -492,12 +697,12 @@ export default function NewInvoicePage() {
 
       {/* ── Section 4: Totals ── */}
       <div className="flex justify-end">
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm w-full max-w-sm p-5 space-y-2 text-sm">
-          <TotalsRow label="Subtotal"        value={fmtMoney(subtotal)} />
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm w-full max-w-sm p-4 sm:p-5 space-y-2 text-sm">
+          <TotalsRow label="Subtotal" value={fmtMoney(subtotal)} />
           {totalDiscount > 0 && (
             <TotalsRow label="Total Discount" value={`- ${fmtMoney(totalDiscount)}`} />
           )}
-          <TotalsRow label="Taxable Amount"  value={fmtMoney(totalTaxable)} />
+          <TotalsRow label="Taxable Amount" value={fmtMoney(totalTaxable)} />
 
           {isSameState ? (
             <>
@@ -541,7 +746,7 @@ export default function NewInvoicePage() {
       </div>
 
       {/* ── Section 5: Notes ── */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-5">
         <label className="block text-xs font-medium text-gray-600 mb-2">Notes / Terms</label>
         <textarea
           rows={3}
@@ -552,34 +757,34 @@ export default function NewInvoicePage() {
         />
       </div>
 
-      {/* ── Section 6: Action Buttons ── */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3 flex justify-end gap-3 z-10">
+      {/* ── Section 6: Action Buttons (Positioned above mobile dock) ── */}
+      <div className="fixed bottom-14 lg:bottom-0 left-0 lg:left-64 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 px-3 sm:px-6 py-2.5 flex items-center justify-between sm:justify-end gap-2 z-20 shadow-lg">
         <button
           type="button"
           onClick={() => handleSave('DRAFT')}
           disabled={!!saving}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-100 text-gray-800 text-sm font-medium rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
+          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 sm:px-5 py-2.5 bg-gray-100 text-gray-800 text-xs sm:text-sm font-medium rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors shadow-sm"
         >
           <Save className="h-4 w-4" />
-          {saving === 'draft' ? 'Saving…' : 'Save as Draft'}
+          <span>{saving === 'draft' ? 'Saving…' : 'Draft'}</span>
         </button>
         <button
           type="button"
           onClick={() => handleSave('SENT')}
           disabled={!!saving}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-700 text-white text-sm font-medium rounded-lg hover:bg-green-800 disabled:opacity-50 transition-colors"
+          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 sm:px-5 py-2.5 bg-green-700 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-green-800 disabled:opacity-50 transition-colors shadow-sm"
         >
           <Send className="h-4 w-4" />
-          {saving === 'send' ? 'Saving…' : 'Save & Send'}
+          <span>{saving === 'send' ? 'Saving…' : 'Save & Send'}</span>
         </button>
         <button
           type="button"
           onClick={handlePreviewPrint}
           disabled={!!saving}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-700 text-white text-sm font-medium rounded-lg hover:bg-blue-800 disabled:opacity-50 transition-colors"
+          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 sm:px-5 py-2.5 bg-blue-700 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-blue-800 disabled:opacity-50 transition-colors shadow-sm"
         >
           <Printer className="h-4 w-4" />
-          {saving === 'print' ? 'Saving…' : 'Preview & Print'}
+          <span>{saving === 'print' ? 'Saving…' : 'Preview'}</span>
         </button>
       </div>
     </div>
@@ -610,7 +815,7 @@ function ItemRow({ row, catalog, isSameState, onItemSelect, onChange, onRemove }
           className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           <option value="">-- Select --</option>
-          {catalog.map(item => (
+          {(Array.isArray(catalog) ? catalog : []).map(item => (
             <option key={item.id} value={item.id}>{item.name} ({item.code})</option>
           ))}
         </select>
