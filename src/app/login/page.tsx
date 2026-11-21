@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Lock, User, KeyRound, ShieldCheck, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { ActionLoader } from '@/components/common/ActionLoader';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -133,6 +134,9 @@ export default function LoginPage() {
     setError('');
 
     try {
+      // Small visual pause to let the 4th digit register on screen
+      await new Promise(r => setTimeout(r, 200));
+
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -141,17 +145,20 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
+        // Keep loading=true so ActionLoader remains smooth until dashboard is ready
         router.push('/dashboard');
         router.refresh();
       } else {
+        setLoading(false);
         setError(data.error || 'ખોટો PIN દાખલ કર્યો છે');
         setPin(['', '', '', '']);
         inputRefs[0].current?.focus();
       }
     } catch {
-      setError('કનેક્શન એરર આવી. ફરી પ્રયાસ કરો.');
-    } finally {
       setLoading(false);
+      setError('કનેક્શન એરર આવી. ફરી પ્રયાસ કરો.');
+      setPin(['', '', '', '']);
+      inputRefs[0].current?.focus();
     }
   };
 
@@ -171,15 +178,16 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
+        // Keep loading=true until page transitions
         router.push('/dashboard');
         router.refresh();
       } else {
+        setLoading(false);
         setError(data.error || 'ખોટો Username અથવા Password છે');
       }
     } catch {
-      setError('કનેક્શન એરર આવી. ફરી પ્રયાસ કરો.');
-    } finally {
       setLoading(false);
+      setError('કનેક્શન એરર આવી. ફરી પ્રયાસ કરો.');
     }
   };
 
@@ -190,6 +198,13 @@ export default function LoginPage() {
         background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)',
       }}
     >
+      {/* ── Global Animated Action Loader on PIN / Password Submission ── */}
+      <ActionLoader
+        isOpen={loading}
+        title="PIN ચકાસણી થઈ રહી છે..."
+        subtitle="કૃપા કરીને રાહ જુઓ, ડેશબોર્ડ લૉગિન પ્રોસેસ ચાલુ છે..."
+      />
+
       {/* Background Decorative Rings */}
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -242,13 +257,26 @@ export default function LoginPage() {
                     inputMode="numeric"
                     maxLength={1}
                     value={digit}
+                    disabled={loading}
                     onChange={(e) => handlePinChange(idx, e.target.value)}
                     onKeyDown={(e) => handlePinKeyDown(idx, e)}
-                    className="w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 border-gray-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 bg-gray-50 text-gray-900 transition-all outline-none"
+                    className={`w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 transition-all outline-none ${
+                      loading
+                        ? 'border-blue-500 bg-blue-50/60 text-blue-800 animate-pulse ring-2 ring-blue-200'
+                        : 'border-gray-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 bg-gray-50 text-gray-900'
+                    }`}
                     autoComplete="off"
                   />
                 ))}
               </div>
+
+              {/* In-Card Processing Indicator right after 4 inputs */}
+              {loading && (
+                <div className="flex items-center justify-center gap-2 text-blue-700 bg-blue-50 border border-blue-200 py-2.5 px-4 rounded-xl text-xs font-semibold animate-pulse shadow-sm mt-3.5">
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                  <span>PIN ચકાસણી થઈ રહી છે... લૉગિન પ્રોસેસ ચાલુ છે...</span>
+                </div>
+              )}
             </div>
 
             {/* Virtual Keypad for Mobile / Touch / Quick Clicks */}
