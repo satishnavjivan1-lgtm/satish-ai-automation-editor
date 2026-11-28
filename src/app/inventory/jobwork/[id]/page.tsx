@@ -176,12 +176,12 @@ export default function ChallanDetailPage() {
         <div className="grid grid-cols-2 gap-6 border-b border-gray-100 pb-4">
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Vendor</p>
-            <p className="font-semibold text-gray-900">{challan.vendor?.name}</p>
-            <p className="text-sm text-gray-500">{challan.vendor?.address}</p>
-            {challan.vendor?.gstin && (
-              <p className="text-sm text-gray-500">GSTIN: {challan.vendor.gstin}</p>
+            <p className="font-semibold text-gray-900">{challan.vendor?.name || (challan as any).party?.name}</p>
+            <p className="text-sm text-gray-500">{challan.vendor?.address || (challan as any).party?.address}</p>
+            {(challan.vendor?.gstin || (challan as any).party?.gstin) && (
+              <p className="text-sm text-gray-500">GSTIN: {challan.vendor?.gstin || (challan as any).party?.gstin}</p>
             )}
-            <p className="text-sm text-gray-500">Ph: {challan.vendor?.phone}</p>
+            <p className="text-sm text-gray-500">Ph: {challan.vendor?.phone || (challan as any).party?.phone}</p>
           </div>
           <div className="text-right space-y-1">
             <div className="flex justify-end gap-6">

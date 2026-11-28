@@ -71,9 +71,11 @@ export default function NewJobWorkPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          partyId: Number(vendorId),
           vendorId: Number(vendorId),
           challanDate,
           expectedReturnDate: expectedReturn || null,
+          dueDate: expectedReturn || null,
           processType,
           notes,
           items: rows.map(r => ({
@@ -81,14 +83,18 @@ export default function NewJobWorkPage() {
             description: r.description,
             sentQtyPcs: Number(r.sentQtyPcs),
             sentWeightKg: Number(r.sentWeightKg),
+            processType,
           })),
         }),
       })
-      if (!res.ok) throw new Error('Failed')
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.error || 'Failed to create challan')
+      }
       const data = await res.json()
       router.push(`/inventory/jobwork/${data.id}`)
-    } catch {
-      setError('Failed to create challan. Please try again.')
+    } catch (err: any) {
+      setError(err?.message || 'Failed to create challan. Please try again.')
     } finally {
       setSaving(false)
     }

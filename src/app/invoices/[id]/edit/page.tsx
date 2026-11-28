@@ -319,7 +319,7 @@ export default function EditInvoicePage() {
           rowErr.rate = true;
           summary.push(`લાઈન #${rowNum}: ભાવ (Rate ₹) 0 થી વધારે દાખલ કરો.`);
         }
-        if ((r.unit === 'KG' || r.unit === 'GRAM' || r.priceMode === 'WEIGHT') && Number(r.weightKg) <= 0) {
+        if ((r.unit === 'KG' || r.unit === 'GRAM' || (r.priceMode as string) === 'PER_KG' || (r.priceMode as string) === 'WEIGHT') && Number(r.weightKg) <= 0) {
           rowErr.weightKg = true;
           summary.push(`લાઈન #${rowNum}: વજન (Weight Kg) 0 થી વધુ હોવું જોઈએ.`);
         }

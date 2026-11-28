@@ -4,14 +4,14 @@ import prisma from '@/lib/prisma'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const partyId = searchParams.get('partyId')
+    const partyId = searchParams.get('partyId') || searchParams.get('vendorId')
     const status = searchParams.get('status')
     const dateFrom = searchParams.get('dateFrom')
     const dateTo = searchParams.get('dateTo')
 
     const where: Record<string, unknown> = {}
     if (partyId) where.partyId = parseInt(partyId)
-    if (status) where.status = status
+    if (status && status !== 'ALL') where.status = status
     if (dateFrom || dateTo) {
       where.challanDate = {}
       if (dateFrom) (where.challanDate as Record<string, Date>).gte = new Date(dateFrom)
@@ -21,13 +21,30 @@ export async function GET(request: NextRequest) {
     const challans = await prisma.jobWorkChallan.findMany({
       where,
       include: {
-        party: { select: { name: true } },
-        items: { include: { item: { select: { name: true, code: true } } } },
+        party: { select: { id: true, name: true, phone: true, address: true, gstin: true } },
+        items: { include: { item: { select: { id: true, name: true, code: true, hsnCode: true } } } },
       },
       orderBy: { challanDate: 'desc' },
     })
 
-    return NextResponse.json(challans)
+    // Map to include both party and vendor properties for UI compatibility
+    const mapped = challans.map(c => {
+      const totalSentWeightKg = c.items.reduce((sum, item) => sum + Number(item.sentWeightKg || 0), 0)
+      const totalReceivedWeightKg = c.items.reduce((sum, item) => sum + Number(item.receivedWeightKg || 0), 0)
+      const burningLossKg = c.items.reduce((sum, item) => sum + Number(item.burningLossKg || 0), 0)
+
+      return {
+        ...c,
+        party: c.party,
+        vendor: c.party,
+        _count: { items: c.items.length },
+        totalSentWeightKg,
+        totalReceivedWeightKg,
+        burningLossKg,
+      }
+    })
+
+    return NextResponse.json(mapped)
   } catch (error) {
     console.error('JobWork Challans GET error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -37,21 +54,39 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { partyId, challanDate, challanNo, dueDate, notes, items: challanItems } = body
+    const partyIdRaw = body.partyId ?? body.vendorId
+    const challanDate = body.challanDate
+    const challanNo = body.challanNo
+    const dueDate = body.dueDate || body.expectedReturnDate
+    const notes = body.notes
+    const challanItems = body.items || body.challanItems
+    const rootProcessType = body.processType || 'CASTING'
 
-    if (!partyId || !challanDate || !challanItems || !Array.isArray(challanItems) || challanItems.length === 0) {
+    if (!partyIdRaw || !challanDate || !challanItems || !Array.isArray(challanItems) || challanItems.length === 0) {
       return NextResponse.json(
-        { error: 'Missing required fields: partyId, challanDate, items[]' },
+        { error: 'Missing required fields: Vendor, Challan Date, and at least 1 Item row' },
         { status: 400 }
       )
     }
 
+    const partyId = parseInt(String(partyIdRaw))
+    if (isNaN(partyId)) {
+      return NextResponse.json({ error: 'Invalid Vendor ID' }, { status: 400 })
+    }
+
     const challan = await prisma.$transaction(async (tx) => {
-      const challanNumber = challanNo || `JWC/${Date.now()}`
+      // Auto-generate sequential challan number if not provided
+      let challanNumber = challanNo
+      if (!challanNumber) {
+        const count = await tx.jobWorkChallan.count()
+        const year = new Date(challanDate).getFullYear()
+        challanNumber = `JWC/${year}/${String(count + 1).padStart(3, '0')}`
+      }
+
       const created = await tx.jobWorkChallan.create({
         data: {
           challanNo: challanNumber,
-          partyId: parseInt(partyId),
+          partyId,
           challanDate: new Date(challanDate),
           expectedReturnDate: dueDate ? new Date(dueDate) : null,
           notes: notes || null,
@@ -68,11 +103,11 @@ export async function POST(request: NextRequest) {
               description: ci.description || '',
               sentQtyPcs: Math.round(parseFloat(String(ci.sentQtyPcs || 0))),
               sentWeightKg: parseFloat(String(ci.sentWeightKg || 0)),
-              processType: (ci.processType as any) || 'CASTING',
+              processType: (ci.processType as any) || (rootProcessType as any) || 'CASTING',
             })),
           },
         },
-        include: { items: true },
+        include: { items: true, party: true },
       })
 
       // Deduct stock for each item (JOB_WORK_OUT)
@@ -107,9 +142,12 @@ export async function POST(request: NextRequest) {
       return created
     })
 
-    return NextResponse.json(challan, { status: 201 })
-  } catch (error) {
+    return NextResponse.json({
+      ...challan,
+      vendor: challan.party,
+    }, { status: 201 })
+  } catch (error: any) {
     console.error('JobWork Challans POST error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Internal server error' }, { status: 500 })
   }
 }

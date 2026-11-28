@@ -176,7 +176,7 @@ export default function JobWorkPage() {
                   <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 font-mono text-xs text-gray-700 font-semibold">{c.challanNo}</td>
                     <td className="px-4 py-3 text-gray-600">{fmt(c.challanDate)}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900">{c.vendor?.name}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{c.vendor?.name || (c as any).party?.name || '—'}</td>
                     <td className="px-4 py-3 text-gray-600">{c._count?.items ?? 0}</td>
                     <td className="px-4 py-3 text-gray-700">{fmtWt(Number(c.totalSentWeightKg))}</td>
                     <td className="px-4 py-3 text-gray-700">{fmtWt(Number(c.totalReceivedWeightKg))}</td>

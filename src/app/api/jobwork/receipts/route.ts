@@ -4,6 +4,101 @@ import prisma from '@/lib/prisma'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+
+    // Support batch receipts: { challanId, items: [{ challanItemId, receivedQtyPcs, receivedWeightKg }] }
+    if (Array.isArray(body.items)) {
+      const { challanId, items: receiptItems, receiptDate, notes } = body
+      if (!receiptItems || receiptItems.length === 0) {
+        return NextResponse.json({ error: 'No items provided for receipt' }, { status: 400 })
+      }
+
+      const results = await prisma.$transaction(async (tx) => {
+        const processed = []
+
+        for (const item of receiptItems) {
+          const challanItemId = parseInt(String(item.challanItemId || item.itemId))
+          const rxQty = parseFloat(String(item.receivedQtyPcs || 0))
+          const rxWeight = parseFloat(String(item.receivedWeightKg || 0))
+
+          if (isNaN(challanItemId) || (rxQty <= 0 && rxWeight <= 0)) {
+            continue
+          }
+
+          const challanItem = await tx.jobWorkChallanItem.findUnique({
+            where: { id: challanItemId },
+            include: { challan: true },
+          })
+
+          if (!challanItem) continue
+
+          const sentWeight = Number(challanItem.sentWeightKg)
+          const burningLossKg = parseFloat((sentWeight - rxWeight).toFixed(3))
+          const burningLossPct =
+            sentWeight > 0 ? parseFloat(((burningLossKg / sentWeight) * 100).toFixed(2)) : 0
+
+          const updatedItem = await tx.jobWorkChallanItem.update({
+            where: { id: challanItemId },
+            data: {
+              receivedQtyPcs: Math.round(rxQty),
+              receivedWeightKg: rxWeight,
+              burningLossKg,
+              burningLossPct,
+            },
+          })
+
+          // Add stock back (JOB_WORK_IN)
+          await tx.stockLedger.create({
+            data: {
+              itemId: challanItem.itemId,
+              type: 'JOB_WORK_IN',
+              refType: 'JOB_WORK_RECEIPT',
+              refId: challanItem.challanId,
+              qtyPcs: rxQty,
+              weightKg: rxWeight,
+              rate: 0,
+              notes: `Job Work Receipt - Challan ${challanItem.challan.challanNo || challanItem.challanId}${notes ? ' - ' + notes : ''}`,
+              entryDate: receiptDate ? new Date(receiptDate) : new Date(),
+            },
+          })
+
+          await tx.item.update({
+            where: { id: challanItem.itemId },
+            data: {
+              currentQtyPcs: { increment: Math.round(rxQty) },
+              currentWeightKg: { increment: rxWeight },
+            },
+          })
+
+          processed.push(updatedItem)
+        }
+
+        // Update overall challan status if challanId is known
+        const targetChallanId = challanId ? parseInt(String(challanId)) : null
+        if (targetChallanId) {
+          const allItems = await tx.jobWorkChallanItem.findMany({
+            where: { challanId: targetChallanId },
+          })
+
+          const allReceived = allItems.every((item) => Number(item.receivedWeightKg) > 0)
+          const someReceived = allItems.some((item) => Number(item.receivedWeightKg) > 0)
+
+          let newStatus: 'OPEN' | 'PARTIAL' | 'CLOSED' = 'OPEN'
+          if (allReceived) newStatus = 'CLOSED'
+          else if (someReceived) newStatus = 'PARTIAL'
+
+          await tx.jobWorkChallan.update({
+            where: { id: targetChallanId },
+            data: { status: newStatus },
+          })
+        }
+
+        return processed
+      })
+
+      return NextResponse.json({ success: true, count: results.length }, { status: 201 })
+    }
+
+    // Support single item receipt
     const { challanItemId, receivedQtyPcs, receivedWeightKg, receiptDate, notes } = body
 
     if (!challanItemId || receivedQtyPcs === undefined || receivedWeightKg === undefined) {
@@ -26,15 +121,11 @@ export async function POST(request: NextRequest) {
     const rxWeight = parseFloat(receivedWeightKg)
     const sentWeight = Number(challanItem.sentWeightKg)
 
-    // Calculate burning loss
     const burningLossKg = parseFloat((sentWeight - rxWeight).toFixed(3))
     const burningLossPct =
-      sentWeight > 0
-        ? parseFloat(((burningLossKg / sentWeight) * 100).toFixed(2))
-        : 0
+      sentWeight > 0 ? parseFloat(((burningLossKg / sentWeight) * 100).toFixed(2)) : 0
 
     const result = await prisma.$transaction(async (tx) => {
-      // Update challan item with received quantities and burning loss
       const updatedItem = await tx.jobWorkChallanItem.update({
         where: { id: parseInt(challanItemId) },
         data: {
@@ -45,7 +136,6 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Add stock back (JOB_WORK_IN)
       await tx.stockLedger.create({
         data: {
           itemId: challanItem.itemId,
@@ -68,7 +158,6 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Check if all items in challan are received; update challan status
       const allItems = await tx.jobWorkChallanItem.findMany({
         where: { challanId: challanItem.challanId },
       })
@@ -96,8 +185,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error('JobWork Receipt POST error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Internal server error' }, { status: 500 })
   }
 }
