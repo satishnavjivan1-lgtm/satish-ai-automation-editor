@@ -50,6 +50,7 @@ export default function ChallanDetailPage() {
   const [receiptRows, setReceiptRows] = useState<ReceiptRow[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [receiptError, setReceiptError] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -87,6 +88,7 @@ export default function ChallanDetailPage() {
     e.preventDefault()
     setSubmitting(true)
     setReceiptError('')
+    setSuccessMsg('')
     try {
       const res = await fetch('/api/jobwork/receipts', {
         method: 'POST',
@@ -100,10 +102,14 @@ export default function ChallanDetailPage() {
           })),
         }),
       })
-      if (!res.ok) throw new Error()
-      load()
-    } catch {
-      setReceiptError('Failed to save receipt. Please try again.')
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.error || 'Failed to save receipt')
+      }
+      setSuccessMsg('માલની પહોંચ (Receipt) સફળતાપૂર્વક સેવ થઈ ગઈ છે!')
+      await load()
+    } catch (err: any) {
+      setReceiptError(err?.message || 'Failed to save receipt. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -258,8 +264,8 @@ export default function ChallanDetailPage() {
         )}
       </div>
 
-      {/* Record Receipt (only when OPEN) */}
-      {challan.status === 'OPEN' && (
+      {/* Record Receipt (when OPEN or PARTIAL) */}
+      {(challan.status === 'OPEN' || challan.status === 'PARTIAL') && (
         <div className="bg-white rounded-xl border border-orange-100 shadow-sm p-6 space-y-4">
           <div className="flex items-center gap-2">
             <CheckCircle className="text-orange-600" size={20} />
@@ -311,6 +317,10 @@ export default function ChallanDetailPage() {
                 </div>
               )
             })}
+
+            {successMsg && (
+              <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg px-4 py-3 text-sm font-medium">{successMsg}</div>
+            )}
 
             {receiptError && (
               <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">{receiptError}</div>
