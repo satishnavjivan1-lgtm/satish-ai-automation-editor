@@ -13,6 +13,17 @@ export async function POST(request: NextRequest) {
       }
 
       const results = await prisma.$transaction(async (tx) => {
+        const itemIds = receiptItems
+          .map((i: any) => parseInt(String(i.challanItemId || i.itemId)))
+          .filter((id: number) => !isNaN(id))
+
+        // Pre-fetch all challan items in a single query to eliminate round-trip latency
+        const existingItems = await tx.jobWorkChallanItem.findMany({
+          where: { id: { in: itemIds } },
+          include: { challan: true },
+        })
+        const itemsMap = new Map(existingItems.map(it => [it.id, it]))
+
         const processed = []
 
         for (const item of receiptItems) {
@@ -24,11 +35,7 @@ export async function POST(request: NextRequest) {
             continue
           }
 
-          const challanItem = await tx.jobWorkChallanItem.findUnique({
-            where: { id: challanItemId },
-            include: { challan: true },
-          })
-
+          const challanItem = itemsMap.get(challanItemId)
           if (!challanItem) continue
 
           const sentWeight = Number(challanItem.sentWeightKg)
@@ -93,6 +100,9 @@ export async function POST(request: NextRequest) {
         }
 
         return processed
+      }, {
+        maxWait: 15000,
+        timeout: 30000,
       })
 
       return NextResponse.json({ success: true, count: results.length }, { status: 201 })
@@ -175,6 +185,9 @@ export async function POST(request: NextRequest) {
       })
 
       return updatedItem
+    }, {
+      maxWait: 15000,
+      timeout: 30000,
     })
 
     return NextResponse.json(

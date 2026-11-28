@@ -197,11 +197,10 @@ export default function ChallanDetailPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-400">Status</p>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                  challan.status === 'CLOSED' ? 'bg-green-100 text-green-700' :
-                  challan.status === 'PARTIAL' ? 'bg-amber-100 text-amber-700' :
-                  'bg-blue-100 text-blue-700'
-                }`}>{challan.status}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${challan.status === 'CLOSED' ? 'bg-green-100 text-green-700' :
+                    challan.status === 'PARTIAL' ? 'bg-amber-100 text-amber-700' :
+                      'bg-blue-100 text-blue-700'
+                  }`}>{challan.status}</span>
               </div>
             </div>
             {challan.expectedReturnDate && (
